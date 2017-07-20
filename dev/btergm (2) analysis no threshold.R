@@ -3,9 +3,9 @@
 options(scipen = 999)
 require(ergm)
 require(btergm)
-setwd("~/Dropbox/(17) 2017 Spring/network QAP Korean election")
-source("btergm helper-functions.R")
-source("btergm (1) data prep no threshhold.R")
+# setwd("~/Dropbox/(17) 2017 Spring/network QAP Korean election")
+# source("btergm helper-functions.R")
+source("dev/btergm (1) data prep no threshhold.R")
 
 
 RNGkind("L'Ecuyer-CMRG")

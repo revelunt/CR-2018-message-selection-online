@@ -4,11 +4,6 @@ options(scipen = 999)
 require(ergm)
 require(data.table)
 require(sna)
-# save(g, g_relrecip, g_autoregression, policy.pref.diff, evaludative.criteria.diff, file = "R_data/ergm.test.Rdata")
-setwd("~/Dropbox/(17) 2017 Spring/network QAP Korean election")
-
-## run custom functions
-source("btergm helper-functions.R")
 
 ## load the dataset from SPSS and set as data.table object
 dat <- haven::read_spss("Dat/DiscussionForumThreeWavePanel(N=341).sav")
@@ -208,91 +203,5 @@ names(predictor.matrix) <- c("consistency.motivation.in-ties",
                              "lagged.reciprocity",
                              "mutual")
 
-##------------------------------------##
-#   MR QAP using muticore processing   #
-##------------------------------------##
-
-require(parallel)
-
-RNGkind("L'Ecuyer-CMRG")
-set.seed(12345, "L'Ecuyer")
-
-MRQAP.model <- netlm.multicore(net, predictor.matrix, intercept = TRUE, mode = "digraph", diag = FALSE, 
-                                            nullhyp = "qapspp", 
-                                            test.statistic = "t-value", reps = 1000, 
-                                            mc.cores = 10) 
-
-MRQAP.model$names <- c("Intercept",
-                       "consistency.motivation.in-ties",
-                       "consistency.motivation.out-ties",
-                       "understanding.motivation.in-ties",
-                       "understanding.motivation.out-ties",
-                       "hedonic.motivation.in-ties",
-                       "hedonic.motivation.out-ties",
-                       "candidate.preference.in-ties",
-                       "candidate.preference.out-ties",
-                       "same.candidate.preference",
-                       "similar.policy.preference",
-                       "similar.evaluative.criteria",
-                       "age.in-ties",
-                       "age.out-ties",
-                       "female.in-ties",
-                       "female.out-ties",
-                       "same.gender",
-                       "education.in-ties",
-                       "education.out-ties",
-                       "talk.freqency.in-ties",
-                       "talk.frequency.out-ties",
-                       "media.use.in-ties",
-                       "media.use.out-ties",
-                       "internal.political.efficacy",
-                       "regional.origin.Seoul.in-ties",
-                       "regional.origin.Seoul.out-ties",
-                       "same.regional.origin",
-                       "previous.communication",
-                       "lagged.reciprocity",
-                       "mutual")
-
-save(MRQAP.model, file = "MRQAP.model.2017.07.18.Rdata")
-
-print(MRQAP.model)
 
 
-# OLS Network Model
-# 
-# Coefficients:
-#                                  Estimate     Pr(<=b) Pr(>=b) Pr(>=|b|)
-# Intercept                          1.136435834 0.875   0.125   0.246    
-# consistency.motivation.in-ties     0.029604166 0.627   0.373   0.731    
-# consistency.motivation.out-ties   -0.011562130 0.378   0.622   0.736    
-# understanding.motivation.in-ties  -0.209034044 0.022   0.978   0.039    
-# understanding.motivation.out-ties  0.137493206 1.000   0.000   0.000    
-# hedonic.motivation.in-ties         0.098864675 0.896   0.104   0.192    
-# hedonic.motivation.out-ties       -0.309703595 0.000   1.000   0.000    
-# candidate.preference.in-ties      -0.020373837 0.431   0.569   0.895    
-# candidate.preference.out-ties      0.297525386 1.000   0.000   0.000    
-# same.candidate.preference          0.013857291 0.595   0.405   0.809    
-# similar.policy.preference         -0.111014163 0.345   0.655   0.690    
-# similar.evaluative.criteria        0.581737039 0.988   0.012   0.028    
-# age.in-ties                        0.029475407 0.639   0.361   0.732    
-# age.out-ties                       0.338954211 1.000   0.000   0.000    
-# female.in-ties                    -0.062962660 0.375   0.625   0.692    
-# female.out-ties                   -0.001681675 0.484   0.516   0.974    
-# same.gender                        0.055390757 0.849   0.151   0.316    
-# education.in-ties                 -0.107442301 0.077   0.923   0.146    
-# education.out-ties                -0.235659167 0.000   1.000   0.000    
-# talk.freqency.in-ties              0.206848711 0.992   0.008   0.015    
-# talk.frequency.out-ties            0.049758120 0.914   0.086   0.157    
-# media.use.in-ties                 -0.062429272 0.142   0.858   0.297    
-# media.use.out-ties                -0.136069055 0.000   1.000   0.000    
-# internal.political.efficacy        0.043077679 0.837   0.163   0.308    
-# regional.origin.Seoul.in-ties     -0.407244170 0.000   1.000   0.005    
-# regional.origin.Seoul.out-ties     0.464350407 1.000   0.000   0.000    
-# same.regional.origin              -0.032265597 0.277   0.723   0.552    
-# previous.communication             2.338941251 1.000   0.000   0.000    
-# lagged.reciprocity                -0.228284640 0.000   1.000   0.002    
-# mutual                             0.416014609 1.000   0.000   0.000    
-# 
-# Residual standard error: 7.472 on 76787 degrees of freedom
-# F-statistic:  1294 on 29 and 76787 degrees of freedom, p-value:     0 
-# Multiple R-squared: 0.3283 	Adjusted R-squared: 0.3281 

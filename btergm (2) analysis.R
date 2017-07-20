@@ -5,13 +5,109 @@
 options(scipen = 999)
 require(ergm)
 require(btergm)
+require(texreg)
+require(parallel)
+
 #setwd("~/Dropbox/GitHub/Korean2012ElectionProject")
 source("dev/btergm helper-functions.R")
 source("dev/btergm (1) data prep.R")
 
-
 RNGkind("L'Ecuyer-CMRG")
 set.seed(12345, "L'Ecuyer")
+
+
+##------------------------------------##
+##  MR QAP using muticore processing  ##
+##------------------------------------##
+
+source("dev/MRQAP 20170718.R")
+
+MRQAP.model <- netlm.multicore(net, predictor.matrix, intercept = TRUE, mode = "digraph", diag = FALSE, 
+                               nullhyp = "qapspp", 
+                               test.statistic = "t-value", reps = 1000, 
+                               mc.cores = 10) 
+
+MRQAP.model$names <- c("Intercept",
+                       "consistency.motivation.in-ties",
+                       "consistency.motivation.out-ties",
+                       "understanding.motivation.in-ties",
+                       "understanding.motivation.out-ties",
+                       "hedonic.motivation.in-ties",
+                       "hedonic.motivation.out-ties",
+                       "candidate.preference.in-ties",
+                       "candidate.preference.out-ties",
+                       "same.candidate.preference",
+                       "similar.policy.preference",
+                       "similar.evaluative.criteria",
+                       
+                       "age.in-ties",
+                       "age.out-ties",
+                       "female.in-ties",
+                       "female.out-ties",
+                       "same.gender",
+                       "education.in-ties",
+                       "education.out-ties",
+                       "talk.freqency.in-ties",
+                       "talk.frequency.out-ties",
+                       "media.use.in-ties",
+                       "media.use.out-ties",
+                       "internal.political.efficacy",
+                       "regional.origin.Seoul.in-ties",
+                       "regional.origin.Seoul.out-ties",
+                       "same.regional.origin",
+                       
+                       "previous.communication",
+                       "lagged.reciprocity",
+                       "mutual")
+
+# save(MRQAP.model, file = "R_results/MRQAP.model.2017.07.18.Rdata")
+
+## goodness of fit for MRQAP model
+
+# MRQAP.gof <- gof(net, predictor.matrix, coef(MRQAP.model), statistics = gof.statistics, 
+#                  nsim = 1000, verbose = TRUE, ncpus = gof_ncpus, parallel = parallel)
+
+print(MRQAP.model)
+
+# OLS Network Model
+# 
+# Coefficients:
+#                                  Estimate     Pr(<=b) Pr(>=b) Pr(>=|b|)
+# Intercept                          1.136435834 0.875   0.125   0.246    
+# consistency.motivation.in-ties     0.029604166 0.627   0.373   0.731    
+# consistency.motivation.out-ties   -0.011562130 0.378   0.622   0.736    
+# understanding.motivation.in-ties  -0.209034044 0.022   0.978   0.039    
+# understanding.motivation.out-ties  0.137493206 1.000   0.000   0.000    
+# hedonic.motivation.in-ties         0.098864675 0.896   0.104   0.192    
+# hedonic.motivation.out-ties       -0.309703595 0.000   1.000   0.000    
+# candidate.preference.in-ties      -0.020373837 0.431   0.569   0.895    
+# candidate.preference.out-ties      0.297525386 1.000   0.000   0.000    
+# same.candidate.preference          0.013857291 0.595   0.405   0.809    
+# similar.policy.preference         -0.111014163 0.345   0.655   0.690    
+# similar.evaluative.criteria        0.581737039 0.988   0.012   0.028    
+# age.in-ties                        0.029475407 0.639   0.361   0.732    
+# age.out-ties                       0.338954211 1.000   0.000   0.000    
+# female.in-ties                    -0.062962660 0.375   0.625   0.692    
+# female.out-ties                   -0.001681675 0.484   0.516   0.974    
+# same.gender                        0.055390757 0.849   0.151   0.316    
+# education.in-ties                 -0.107442301 0.077   0.923   0.146    
+# education.out-ties                -0.235659167 0.000   1.000   0.000    
+# talk.freqency.in-ties              0.206848711 0.992   0.008   0.015    
+# talk.frequency.out-ties            0.049758120 0.914   0.086   0.157    
+# media.use.in-ties                 -0.062429272 0.142   0.858   0.297    
+# media.use.out-ties                -0.136069055 0.000   1.000   0.000    
+# internal.political.efficacy        0.043077679 0.837   0.163   0.308    
+# regional.origin.Seoul.in-ties     -0.407244170 0.000   1.000   0.005    
+# regional.origin.Seoul.out-ties     0.464350407 1.000   0.000   0.000    
+# same.regional.origin              -0.032265597 0.277   0.723   0.552    
+# previous.communication             2.338941251 1.000   0.000   0.000    
+# lagged.reciprocity                -0.228284640 0.000   1.000   0.002    
+# mutual                             0.416014609 1.000   0.000   0.000    
+# 
+# Residual standard error: 7.472 on 76787 degrees of freedom
+# F-statistic:  1294 on 29 and 76787 degrees of freedom, p-value:     0 
+# Multiple R-squared: 0.3283 	Adjusted R-squared: 0.3281 
+
 
 ## --------------------------- ##
 ## Bootstrapped TERGM analysis ##
@@ -139,11 +235,7 @@ save(final.model, file = "R_results/July19.final.model.Rdata")
 final.model.gof <- gof(final.model, statistics = gof.statistics, 
                   nsim = 300, verbose = TRUE, ncpus = gof_ncpus, parallel = parallel)
 plot(final.model.gof, mfrow = FALSE, xlim = 40)
-save(final.model.gof, file = "July19.final.model.gof.Rdata")
-
-
-## all models so far at once
-texreg::screenreg(list(model1, model2, final.model), single.row = T)
+# save(final.model.gof, file = "July19.final.model.gof.Rdata")
 
 pdf(file = "final.model.gof.pdf", width = 14, height = 10)
 
@@ -160,10 +252,64 @@ plot(final.model.gof$`Tie prediction`)
 plot(final.model.gof$`Modularity (walktrap)`)
 dev.off()
 
-save(model1, model2, final.model, file = "R_results/btergm.results.July 19th.Rdata")
-save(final.model.gof, file = "R_results/btergm.gof.results.July 19th.Rdata")
+# save(model1, model2, final.model, file = "R_results/btergm.results.July 19th.Rdata")
+# save(final.model.gof, file = "R_results/btergm.gof.results.July 19th.Rdata")
 
-
+# ===========================================================================================================================================
+#                                                       Control only                   Control + Structural           Final Model                  
+# -------------------------------------------------------------------------------------------------------------------------------------------
+# Edges (Intercept)                                 -4.662 [-6.615; -3.259] *      -1.150 [-2.185;   .292]        -1.854 [-2.904;  -.381] *
+# Motivation and Homophily                                                                                                                   
+#   Consistency motivation (in-ties)                                                                                .031 [ -.019;   .095]  
+#   Consistency motivation (out-ties)                                                                               .028 [ -.107;   .073]  
+#   Understanding motivation (in-ties)                                                                             -.052 [ -.104;   .021]  
+#   Understanding motivation (out-ties)                                                                             .027 [  .005;   .076] *
+#   Hedonic motivation (in-ties)                                                                                   -.008 [ -.029;   .004]  
+#   Hedonic motivation (out-ties)                                                                                   .095 [  .074;   .119] *
+#   Candidate pref = Moon (in-ties)                                                                                 .002 [ -.010;   .094]  
+#   Candidate pref = Moon (out-ties)                                                                                .013 [ -.130;   .112]  
+#   Same candidate pref                                                                                            -.032 [ -.079;   .048]  
+#   Similar policy pref                                                                                            -.108 [ -.215;   .028]  
+#   Similar evaluative criteria                                                                                     .407 [  .207;   .415] *
+# Endogenous structural effects                                                                                                              
+#   Isolates                                                                        1.019 [  .803;  1.250] *       1.019 [  .790;  1.262] *
+#   Reciprocity                                                                      .765 [  .497;  1.066] *        .768 [  .507;  1.067] *
+#   Multiple path closure (GWESP-OTP, 3)                                             .058 [ -.055;   .125]          .058 [ -.053;   .126]  
+#   Multiple cyclic closure (GWESP-ITP, 3)                                          -.068 [ -.082;  -.060] *       -.066 [ -.080;  -.060] *
+#   Multiple activity closure (GWESP-OSP, 3)                                         .035 [  .029;   .053] *        .035 [  .032;   .053] *
+#   Multiple popularity closure (GWESP-ISP, 2)                                       .117 [  .080;   .240] *        .115 [  .082;   .233] *
+#   Multiple two-paths (GWDSP, 1)                                                    .003 [ -.007;   .009]          .003 [ -.007;   .009]  
+#   Activity spread (GW-outdegree, 2)                                              -4.401 [-4.701; -4.144] *      -4.351 [-4.557; -4.034] *
+#   Popularity spread (GW-indegree, 3)                                             -4.056 [-5.271; -3.289] *      -4.047 [-5.313; -3.233] *
+# Lagged structural effects                                                                                                                  
+#   Previous communication                                                           .214 [  .182;   .256] *        .223 [  .194;   .253] *
+#   Delayed reciprocity                                                              .082 [ -.059;   .352]          .073 [ -.072;   .344]  
+#   Delayed transitivity closure                                                     .034 [  .017;   .057] *        .034 [  .019;   .055] *
+#   Delayed cyclic closure                                                           .037 [  .009;   .057] *        .033 [  .007;   .057] *
+#   Delayed activity closure                                                        -.057 [ -.068;  -.036] *       -.056 [ -.068;  -.036] *
+#   Delayed popularity closure                                                      -.060 [ -.110;  -.035] *       -.059 [ -.110;  -.032] *
+#   Persistent sender (out-tie)                                                      .019 [  .009;   .028] *        .019 [  .010;   .029] *
+#   Persistent receiver (in-ties)                                                    .023 [  .019;   .036] *        .024 [  .018;   .038] *
+# Controls                                                                                                                                   
+#   Age (in-ties)                                     .086 [ -.030;   .166]          .004 [ -.015;   .032]         -.001 [ -.019;   .026]  
+#   Age (out-ties)                                    .211 [ -.119;   .383]          .032 [ -.225;   .073]          .052 [ -.193;   .095]  
+#   Female (in-ties)                                 -.185 [ -.304;  -.134] *       -.003 [ -.044;   .047]          .010 [ -.037;   .065]  
+#   Female (out-ties)                                -.194 [ -.456;  -.122] *        .075 [ -.293;   .436]          .013 [ -.356;   .337]  
+#   Gender homophily                                  .010 [ -.032;   .037]          .050 [  .020;   .095] *        .044 [  .019;   .086] *
+#   Education (in-ties)                              -.120 [ -.182;  -.076] *       -.007 [ -.041;   .017]         -.013 [ -.039;   .014]  
+#   Education (out-ties)                             -.123 [ -.234;   .055]          .028 [ -.009;   .097]          .018 [ -.013;   .083]  
+#   Regional origin = Seoul (in-ties)                -.426 [ -.492;  -.300] *       -.077 [ -.135;   .054]         -.086 [ -.163;   .047]  
+#   Regional origin = Seoul (out-ties)               -.179 [ -.382;   .005]         -.145 [ -.656;   .343]         -.120 [ -.608;   .366]  
+#   Regional homophily (Seoul)                       -.021 [ -.053;   .029]          .013 [ -.022;   .080]          .017 [ -.014;   .080]  
+#   Talk freq (in-ties)                               .110 [ -.128;   .272]          .045 [  .018;   .048] *        .042 [  .010;   .045] *
+#   Talk freq (out-ties)                              .048 [ -.391;   .396]          .033 [ -.119;   .177]          .019 [ -.106;   .156]  
+#   Media use (in-ties)                              -.058 [ -.111;   .516]         -.011 [ -.022;   .020]         -.010 [ -.019;   .032]  
+#   Media use (out-ties)                             -.079 [ -.117;   .602]          .040 [  .004;   .288] *        .033 [ -.014;   .287]  
+#   Internal efficacy                                 .124 [  .084;   .188] *       -.015 [ -.063;   .015]          .003 [ -.047;   .034]  
+# -------------------------------------------------------------------------------------------------------------------------------------------
+#           Num. obs.                                       291085                         291096                         291096                       
+# ===========================================================================================================================================
+  
 ## all models to a file
 texreg::htmlreg(list(model1, model2, final.model), digits = 3, leading.zero = F, single.row = T,
                   custom.model.names = c("Control only", "Control + Structural", "Final Model"),
@@ -352,16 +498,57 @@ ggplot(mean.pb, aes(x = indegree, y = mean.pb, fill = time)) +
   scale_x_continuous(breaks = 0:9, labels = paste0("(", 0:9, ")"))
 
 
+## ---------------------------- ##
+## Additional interaction model ##
+## ---------------------------- ##
+
+source("dev/interaction test 20170721.R")
+# load("R_results/final.model4 (interaction).Rdata")
+
+screenreg(list(final.model, final.model4), digits = 3, single.row = T,
+              custom.model.names = c("Final Model", "Interactions"),
+              custom.coef.names = c("Edges (Intercept)", "Age (in-ties)", "Age (out-ties)",
+                                    "Female (in-ties)", "Female (out-ties)", "Gender homophily",
+                                    "Education (in-ties)", "Education (out-ties)",
+                                    "Regional origin = Seoul (in-ties)",
+                                    "Regional origin = Seoul (out-ties)",
+                                    "Regional homophily (Seoul)",
+                                    "Talk freq (in-ties)", "Talk freq (out-ties)", 
+                                    "Media use (in-ties)", "Media use (out-ties)",
+                                    "Internal efficacy", 
+                                    "Consistency motivation (in-ties)", "Consistency motivation (out-ties)",
+                                    "Understanding motivation (in-ties)", "Understanding motivation (out-ties)", 
+                                    "Hedonic motivation (in-ties)", "Hedonic motivation (out-ties)", 
+                                    "Candidate pref = Moon (in-ties)", "Candidate pref = Moon (out-ties)", "Same candidate pref", 
+                                    "Similar policy pref", "Similar evaluative criteria",
+                                    "Isolates", "Reciprocity", "Previous communication",
+                                    "Multiple two-paths (GWDSP, 1)", 
+                                    "Delayed reciprocity", 
+                                    "Delayed transitivity closure", "Delayed cyclic closure", 
+                                    "Delayed activity closure", "Delayed popularity closure",
+                                    "Persistent sender (out-tie)", "Persistent receiver (in-ties)",
+                                    "Multiple path closure (GWESP-OTP, 3)", "Multiple cyclic closure (GWESP-ITP, 3)", 
+                                    "Multiple activity closure (GWESP-OSP, 3)", "Multiple popularity closure (GWESP-ISP, 2)",
+                                    "Activity spread (GW-outdegree, 2)", "Popularity spread (GW-indegree, 3)",
+                                    "Transitive closure X alter more interested", 
+                                    "Multiple activity closure X same candidate pref"),
+              custom.note = " * 0 outside the 95% confidence interval based on 1000 replications", 
+              reorder.coef = c(1, 45:46, 17:27, 28:29,31,39:44, 30,32:38, 2:16),
+              groups = list("Additional interaction" = 2:3,
+                            "Motivation and Homophily" = 4:14,
+                            "Endogenous structural effects" = 15:23,
+                            "Lagged structural effects" = 24:31,
+                            "Controls" = 32:46))
+
 
 ## -------------------------------------------- ##
 ## Comparion with MRQAP and non-threshold model ##
 ## -------------------------------------------- ##
 
-# source("MRQAP 20170718.R")
-# source("btergm (2) analysis _ no threshold.R")
+# source("dev/btergm (2) analysis no threshold.R")
 
-load("MRQAP.model.2017.07.18.Rdata")
-load("final.model.nothreshold.July20.Rdata")
+load("R_results/MRQAP.model.2017.07.18.Rdata")
+load("R_results/final.model.nothreshold.July20.Rdata")
 
 print(MRQAP.model)
 summary(final.model.nothreshold)
@@ -392,7 +579,6 @@ tr.qap@coef.names <- c("edges",
                        "nodeicov.media.use.freq",
                        "nodeocov.media.use.freq",
                        "nodecov.internal.efficacy",
-                       "nodecov.external.efficacy",
                        "nodeifactor.region_origin2.1",
                        "nodeofactor.region_origin2.1",
                        "nodematch.region_origin2",
@@ -404,21 +590,37 @@ tr.qap@coef.names <- c("edges",
 screenreg(list(tr.qap, final.model, final.model.nothreshold), digits = 3, 
           leading.zero = F, single.row = T,
           custom.model.names = c("MRQAP Model", "BTERG Model", "BTERGM non-threshold"),
-          custom.coef.names = c(tr.qap@coef.names,
-                                names(final.model@coef)[17:21],
-                                "gwesp.OTP", "gwesp.ITP", "gwesp.OSP", "gwesp.ISP",
-                                "gwdsp.ITP", "gwdsp.OSP", "gwdsp.ISP",
-                                names(final.model@coef)[30:31],
-                                "gwesp.OTP", "gwesp.ITP", "gwesp.OSP", "gwesp.ISP",
-                                "gwdsp.ITP", "gwdsp.OSP", "gwdsp.ISP"))
+          custom.coef.names = c("Edges (Intercept)",
+                                "Consistency motivation (in-ties)", "Consistency motivation (out-ties)",
+                                "Understanding motivation (in-ties)", "Understanding motivation (out-ties)", 
+                                "Hedonic motivation (in-ties)", "Hedonic motivation (out-ties)", 
+                                "Candidate pref = Moon (in-ties)", "Candidate pref = Moon (out-ties)", "Same candidate pref", 
+                                "Similar policy pref", "Similar evaluative criteria",
+                                "Age (in-ties)", "Age (out-ties)",
+                                "Female (in-ties)", "Female (out-ties)", "Gender homophily",
+                                "Education (in-ties)", "Education (out-ties)",
+                                "Talk freq (in-ties)", "Talk freq (out-ties)", 
+                                "Media use (in-ties)", "Media use (out-ties)",
+                                "Internal efficacy", 
+                                "Regional origin = Seoul (in-ties)",
+                                "Regional origin = Seoul (out-ties)",
+                                "Regional homophily (Seoul)",
+                                "Previous communication", "Delayed reciprocity", 
+                                "Reciprocity", 
+                                "Isolates",
+                                "Multiple two-paths (GWDSP, 1 / 0.7)", 
+                                "Delayed transitivity closure", "Delayed cyclic closure", 
+                                "Delayed activity closure", "Delayed popularity closure",
+                                "Persistent sender (out-tie)", "Persistent receiver (in-ties)",
+                                "Multiple path closure (GWESP-OTP, 3)", "Multiple cyclic closure (GWESP-ITP, 3)", 
+                                "Multiple activity closure (GWESP-OSP, 3)", "Multiple popularity closure (GWESP-ISP, 2)",
+                                "Activity spread (GW-outdegree, 2 / 3.5)", "Popularity spread (GW-indegree, 3 / 1)",
+                                "Multiple two-paths (GWDSP, 1 / 0.7)"),
+          custom.note = " * 0 outside the 95% confidence interval based on 1000 replications", 
+          reorder.coef = c(1:12, 30:32,39:44, 28:29,33:38, 13:27),
+          groups = list("Motivation and Homophily" = 2:12,
+                        "Endogenous structural effects" = 13:21,
+                        "Lagged structural effects" = 22:29,
+                        "Controls" = 30:44))
 
-## goodness of fit for MRQAP model
 
-predictor.matrix.gof <- list()
-dim <- dim(predictor.matrix)[1]
-for (i in 1:dim) {
-  predictor.matrix.gof[[i]] <- as.matrix(predictor.matrix[i, , ])
-}
-
-MRQAP.gof <- gof(net, predictor.matrix.gof, coef(MRQAP.model), statistics = gof.statistics, 
-    nsim = 1000, verbose = TRUE, ncpus = gof_ncpus, parallel = parallel)  
