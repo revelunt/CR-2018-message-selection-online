@@ -1,7 +1,5 @@
 
-options(scipen = 999)
-setwd("~/Dropbox/(17) 2017 Spring/network QAP Korean election")
-rm(list=ls())
+
 library(foreign)
 library(plyr)
 
@@ -54,7 +52,7 @@ g[[1]][, sum(count), by = c("poster.id", "reader.id")][poster.id %in% vids & rea
 g[[1]] <- graph.data.frame(g[[1]], directed = TRUE, vertices = 1:341)
 g[[1]] <- induced_subgraph(g[[1]], vids = vids)
 g[[1]] <- as.matrix(as_adj(g[[1]]))
-g[[1]] <- sna::event2dichot(g[[1]], method = "absolute", thresh = 2.508298)
+g[[1]] <- sna::event2dichot(g[[1]], method = "absolute", thresh = 0.5)
 g[[1]] <- as.network(g[[1]])
 
 ## Wave 2 network from 12/11 to 12/13 (survey administered at Dec 11th to 13th?)
@@ -64,7 +62,7 @@ setDT(g[[2]]); g[[2]][, count :=1]
 g[[2]][, sum(count), by = c("poster.id", "reader.id")][poster.id %in% vids & reader.id %in% vids, mean(V1)] 
 g[[2]] <- induced_subgraph(graph.data.frame(g[[2]], directed = TRUE, vertices = 1:341), vids = vids)
 g[[2]] <- as.matrix(as_adj(g[[2]]))
-g[[2]] <- sna::event2dichot(g[[2]], method = "absolute", thresh = 2.909601)
+g[[2]] <- sna::event2dichot(g[[2]], method = "absolute", thresh = 0.5)
 g[[2]] <- as.network(g[[2]])
 
 
@@ -75,7 +73,7 @@ setDT(g[[3]]); g[[3]][, count :=1]
 g[[3]][, sum(count), by = c("poster.id", "reader.id")][poster.id %in% vids & reader.id %in% vids, mean(V1)] 
 g[[3]] <- induced_subgraph(graph.data.frame(g[[3]], directed = TRUE, vertices = 1:341), vids = vids)
 g[[3]] <- as.matrix(as_adj(g[[3]]))
-g[[3]] <- sna::event2dichot(g[[3]], method = "absolute", thresh = 3.233531)
+g[[3]] <- sna::event2dichot(g[[3]], method = "absolute", thresh = 0.5)
 g[[3]] <- as.network(g[[3]])
 
 
@@ -89,7 +87,7 @@ g_pre[[1]] <- graph.data.frame(g_pre[[1]], directed = TRUE, vertices = 1:341)
 g_pre[[1]] <- induced_subgraph(g_pre[[1]], vids = vids)
 #g_pre[[1]] <- simplify(g_pre[[1]], remove.multiple = T, remove.loops = T)
 g_pre[[1]] <- as.matrix(as_adj(g_pre[[1]]))
-g_pre[[1]] <- sna::event2dichot(g_pre[[1]], method = "absolute", thresh = 2.331749)
+g_pre[[1]] <- sna::event2dichot(g_pre[[1]], method = "absolute", thresh = 0.5)
 g_pre[[1]] <- as.network(g_pre[[1]])
 
 ## between Wave 1 and Wave 2
@@ -102,7 +100,7 @@ g_pre[[2]] <- graph.data.frame(g_pre[[2]], directed = TRUE, vertices = 1:341)
 g_pre[[2]] <- induced_subgraph(g_pre[[2]], vids = vids)
 #g_pre[[2]] <- simplify(g_pre[[2]], remove.multiple = T, remove.loops = T)
 g_pre[[2]] <- as.matrix(as_adj(g_pre[[2]]))
-g_pre[[2]] <- sna::event2dichot(g_pre[[2]], method = "absolute", thresh = 3.122216)
+g_pre[[2]] <- sna::event2dichot(g_pre[[2]], method = "absolute", thresh = 0.5)
 g_pre[[2]] <- as.network(g_pre[[2]])
 
 ## between Wave 2 and Wave 3
@@ -115,7 +113,7 @@ g_pre[[3]] <- graph.data.frame(g_pre[[3]], directed = TRUE, vertices = 1:341)
 g_pre[[3]] <- induced_subgraph(g_pre[[3]], vids = vids)
 #g_pre[[3]] <- simplify(g_pre[[3]], remove.multiple = T, remove.loops = T)
 g_pre[[3]] <- as.matrix(as_adj(g_pre[[3]]))
-g_pre[[3]] <- sna::event2dichot(g_pre[[3]], method = "absolute", thresh = 2.721771)
+g_pre[[3]] <- sna::event2dichot(g_pre[[3]], method = "absolute", thresh = 0.5)
 g_pre[[3]] <- as.network(g_pre[[3]])
 
 ##------------------------------------------##
@@ -318,6 +316,20 @@ g[[1]] %v% "social.motivation" <- apply(hedomic.motivation, 1, mean)
 g[[2]] %v% "social.motivation" <- apply(hedomic.motivation, 1, mean)
 g[[3]] %v% "social.motivation" <- apply(hedomic.motivation, 1, mean)
 
+## message quality 
+g[[1]] %v% "message.quality" <- dat[vids, .(quality = rowMeans(as.matrix(.SD), na.rm = T)), 
+                                    .SDcols = c("툴민_주장_mean", "툴민_근거_mean",
+                                                "툴민_보장_mean", "툴민_보강_mean")][, 
+                                                                             recode(quality, "NA = 0; NaN = 0")]
+g[[3]] %v% "message.quality" <- g[[2]] %v% "message.quality" <- g[[1]] %v% "message.quality"
+
+## message cues 
+g[[1]] %v% "message.cue" <- dat[vids, .(quality = rowMeans(as.matrix(.SD), na.rm = T)), 
+                                .SDcols = c("추천_mean", "댓글_mean", "반대_mean")][, 
+                                                                              recode(quality, "NA = 0; NaN = 0")]
+g[[3]] %v% "message.cue" <- g[[2]] %v% "message.cue" <- g[[1]] %v% "message.cue"
+
+
 ## demographics (time-invariant) covariates
 
 for (i in 1:3) {
@@ -377,6 +389,7 @@ for (i in 1:3) {
 
 ## delayed transitivity and delayed cyclic closure 
 g_lagtransitivity <- g_lagcyclic <- list()
+g_lag_shared_activity <- g_lag_shared_popularity <- list()
 for (i in 1:3) {
   temp <- as.matrix(g_pre[[i]]) %*% as.matrix(g_pre[[i]])
   diag(temp) <- 0
@@ -385,6 +398,14 @@ for (i in 1:3) {
   temp <- t(as.matrix(g_pre[[i]])) %*% t(as.matrix(g_pre[[i]]))
   diag(temp) <- 0
   g_lagcyclic[[i]] <- temp
+  
+  temp <- as.matrix(g_pre[[i]]) %*% t(as.matrix(g_pre[[i]]))
+  diag(temp) <- 0
+  g_lag_shared_activity[[i]] <- temp
+  
+  temp <- t(as.matrix(g_pre[[i]])) %*% as.matrix(g_pre[[i]])
+  diag(temp) <- 0
+  g_lag_shared_popularity[[i]] <- temp
 }
 
 ## source and sink nodes
@@ -396,6 +417,22 @@ out[, source := .(indegree == 0 & outdegree > 0)]
 g[[i]] %v% "sink" <- out[, sink]
 g[[i]] %v% "source" <- out[, source]
 }
+
+asymmetrical.knowledge <- lapply(g, make_asymmetrical_adj, "knowledge")
+asymmetrical.interest <- lapply(g, make_asymmetrical_adj, "interest")
+
+alter_more_knowledgeable <- lapply(asymmetrical.knowledge, function(x) {
+  mat <- 1 * (x > 0)
+  diag(mat) <- 0
+  mat
+}
+)
+
+alter_more_interested <- lapply(asymmetrical.interest, function(x) {
+  mat <- 1 * (x > 0)
+  diag(mat) <- 0
+  mat
+})
 
 # ## factor analysis for homophily variable groups
 # dat.factor <- data.table(pol.ideo.W1 = dat[vids, as.numeric(pv258)], 

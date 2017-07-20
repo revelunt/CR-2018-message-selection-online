@@ -1,14 +1,14 @@
 
 ## interaction test on final model
-transitivity.X.same.candidate <- list()
-cyclic.closure.X.same.candidate <- list()
+shared.popularity.X.same.candidate <- list()
+shared.activity.X.same.candidate <- list()
 mutual.X.same.candidate <- list()
 
 for (i in 1:3) {
- temp1 <- ergmMPLE(g[[i]] ~ dgwesp(1.5, fixed = T, type = "OTP"), output = "array")$predictor[,,1]
+ temp1 <- ergmMPLE(g[[i]] ~ dgwesp(1.5, fixed = T, type = "ISP"), output = "array")$predictor[,,1]
  dimnames(temp1) <- NULL
  
- temp1.r <- ergmMPLE(g[[i]] ~ dgwesp(1.5, fixed = T, type = "ITP"), output = "array")$predictor[,,1]
+ temp1.r <- ergmMPLE(g[[i]] ~ dgwesp(1.5, fixed = T, type = "OSP"), output = "array")$predictor[,,1]
  dimnames(temp1.r) <- NULL
  
  temp1.2r <- ergmMPLE(g[[i]] ~ mutual, output = "array")$predictor[,,1]
@@ -27,43 +27,67 @@ for (i in 1:3) {
  rownames(outmat2) <- colnames(outmat2) <- g[[i]] %v% "vertex.names"
  rownames(outmat3) <- colnames(outmat3) <- g[[i]] %v% "vertex.names"
  
- transitivity.X.same.candidate[[i]] <- outmat
- cyclic.closure.X.same.candidate[[i]] <- outmat2
+ shared.popularity.X.same.candidate[[i]] <- outmat
+ shared.activity.X.same.candidate[[i]] <- outmat2
  mutual.X.same.candidate[[i]] <- outmat3
 }
 
 
 final.model2 <- btergm(
-g ~ edges + 
-  nodeicov("consistency.motivation") + nodeocov("consistency.motivation") + 
-  nodeicov("understanding.motivation") + nodeocov("understanding.motivation") + 
-  nodeicov("hedomic.motivation") + nodeocov("hedomic.motivation") + 
-  nodeicov("candidate.preference") + nodeocov("candidate.preference") + 
-  nodematch("candidate.preference") + edgecov(policy.pref.sim) + 
-  edgecov(evaludative.criteria.sim) + 
+  g ~ edges + ## intercept
+    
+    ## demographic controls
+    nodeicov("age") + nodeocov("age") + 
+    nodeifactor("gender") + nodeofactor("gender") + nodematch("gender") + 
+    nodeicov("edu") + nodeocov("edu") + 
+    nodeifactor("region_origin2") + 
+    nodeofactor("region_origin2") + 
+    nodematch("region_origin2") +   
+    
+    ## political discussion-related controls
+    nodeicov("talk.freq") + nodeocov("talk.freq") + 
+    nodeicov("media.use.freq") + nodeocov("media.use.freq") + 
+    nodecov("internal.efficacy") + 
+    
+    ## individual, motivation factor
+    nodeicov("consistency.motivation") + nodeocov("consistency.motivation") + 
+    nodeicov("understanding.motivation") + nodeocov("understanding.motivation") + 
+    nodeicov("hedomic.motivation") + nodeocov("hedomic.motivation") + 
+    
+    ## dyadic, consistency
+    nodeicov("candidate.preference") + nodeocov("candidate.preference") + 
+    nodematch("candidate.preference") + 
+    edgecov(policy.pref.sim) +
+    
+    ## dyadic, understanding
+    edgecov(evaludative.criteria.sim) +
+    
+    ## endogenous and lagged structural, control
+    isolates + mutual + 
+    edgecov(g_autoregression) + 
+    gwdsp(decay = 1, fixed = T) + 
+    
+    ## lagged structural, control
+    edgecov(g_delrecip) + 
+    edgecov(g_lagtransitivity) + ## lagged gwesp_OTP
+    edgecov(g_lagcyclic) + ## lagged gwesp_ITP
+    edgecov(g_lag_shared_activity) + ## lagged gwesp_OSP
+    edgecov(g_lag_shared_popularity) + ## lagged gwesp_ISP
+    nodeocov("lagged.sender.effect") + 
+    nodeicov("lagged.receiver.effect") + 
+    
+    ## endogenous structural
+    dgwesp(decay = 3, fixed = T, type = "OTP") + ## 3 or 1.5 understanding
+    dgwesp(decay = 3, fixed = T, type = "ITP") + ## 3 or 1.5 understanding
+    dgwesp(decay = 3, fixed = T, type = "OSP") + ## 3 or 1.5 consistency
+    dgwesp(decay = 2, fixed = T, type = "ISP") + ## 3 or 1.5 consistency
+    
+    gwodegree(decay = 2, fixed = T) + ## hedonic
+    gwidegree(decay = 3, fixed = T) + 
   
-  nodeicov("age") + nodeocov("age") + nodeifactor("gender") + 
-  nodeofactor("gender") + nodematch("gender") + nodeicov("edu") + 
-  nodeocov("edu") + nodeicov("talk.freq") + nodeocov("talk.freq") + 
-  nodeicov("media.use.freq") + nodeocov("media.use.freq") + 
-  nodecov("internal.efficacy") + nodecov("external.efficacy") + 
-  nodeifactor("region_origin2") + 
-  nodeofactor("region_origin2") + nodematch("region_origin2") + 
-  
-  edgecov(g_autoregression) + edgecov(g_delrecip) + edgecov(g_lagtransitivity) + 
-  edgecov(g_lagcyclic) + nodeocov("lagged.sender.effect") + 
-  nodeicov("lagged.receiver.effect") + 
-  
-  isolates + mutual + 
-  dgwesp(decay = 1.5, fixed = T, type = "OTP") + dgwesp(decay = 1.5, fixed = T, type = "ITP") + 
-  dgwesp(decay = 1.5, fixed = T,  type = "OSP") + dgwesp(decay = 1.5, fixed = T, type = "ISP") + 
-  dgwdsp(decay = 1, fixed = T, type = "ITP") + dgwdsp(decay = 1,  fixed = T, type = "OSP") + 
-  dgwdsp(decay = 1, fixed = T, type = "ISP") + 
-  gwodegree(decay = 2.5, fixed = T) + gwidegree(decay = 3,fixed = T) + 
-  
-  edgecov(mutual.X.same.candidate) + edgecov(transitivity.X.same.candidate) + edgecov(cyclic.closure.X.same.candidate),
+  edgecov(mutual.X.same.candidate) + edgecov(shared.popularity.X.same.candidate) + edgecov(shared.activity.X.same.candidate),
 
-  R = 1000, parallel = "multicore", ncpus = 4)
+  R = 1000, parallel = "multicore", ncpus = 7)
 
 # ===========================================================================
 #                                                               Model 1                      
