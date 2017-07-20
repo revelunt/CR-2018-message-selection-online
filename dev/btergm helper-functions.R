@@ -550,3 +550,11 @@ desp_ISP <- function(mat)
 
 # function to tag whether given value (x) is in between of lower and upper limits
 is.between <- function(x, lower, upper) {x > lower & x < upper}
+
+# function to make standardized values from raw scale
+z.var <- function(var) {
+  mean <- mean(var, na.rm = T)
+  sd <- sd(var, na.rm = T)
+  z.var <- (var - mean)/sd
+  z.var
+}

@@ -220,7 +220,18 @@ g[[3]] %v% "knowledge" <- g[[2]] %v% "knowledge" <- g[[1]] %v% "knowledge"
 # there were no measurement in Wave 2 and Wave 3, so we treat the attributes to be invariant across measurement waves
 
 g[[1]] %v% "interest" <- dat[vids, pv165:pv166][, rowMeans(.SD), by = vids][,V1] 
-g[[3]] %v% "interest" <- g[[2]] %v% "interest" <- g[[1]] %v% "interest"            
+g[[3]] %v% "interest" <- g[[2]] %v% "interest" <- g[[1]] %v% "interest"    
+
+
+## combining knowledge and interest to "expertise"
+g[[1]] %v% "expertise" <- apply(
+                                cbind(scale(g[[1]] %v% "knowledge", scale = T),
+                                      scale(g[[1]] %v% "interest", scale = T)), 
+                                1, mean)
+
+g[[3]] %v% "expertise" <- g[[2]] %v% "expertise" <- g[[1]] %v% "expertise"
+
+
 
 ## external efficacy:
 g[[1]] %v% "external.efficacy" <- dat[vids, .(8 - pv163, 8 - pv164, pv165, pv167)][, rowMeans(.SD), by = vids][,V1]
@@ -407,10 +418,10 @@ for (i in 1:3) {
   g_lag_shared_popularity[[i]] <- temp
 }
 
-asymmetrical.knowledge <- lapply(g, make_asymmetrical_adj, "knowledge")
+asymmetrical.expertise <- lapply(g, make_asymmetrical_adj, "expertise")
 asymmetrical.interest <- lapply(g, make_asymmetrical_adj, "interest")
 
-alter_more_knowledgeable <- lapply(asymmetrical.knowledge, function(x) {
+alter_more_expertise <- lapply(asymmetrical.expertise, function(x) {
   mat <- 1 * (x > 0)
   diag(mat) <- 0
   mat

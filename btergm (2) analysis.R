@@ -8,7 +8,7 @@ require(btergm)
 require(texreg)
 require(parallel)
 
-#setwd("~/Dropbox/GitHub/Korean2012ElectionProject")
+# setwd("~/Dropbox/GitHub/Korean2012ElectionProject")
 source("dev/btergm helper-functions.R")
 source("dev/btergm (1) data prep.R")
 
@@ -505,8 +505,8 @@ ggplot(mean.pb, aes(x = indegree, y = mean.pb, fill = time)) +
 source("dev/interaction test 20170721.R")
 # load("R_results/final.model4 (interaction).Rdata")
 
-screenreg(list(final.model, final.model4), digits = 3, single.row = T,
-              custom.model.names = c("Final Model", "Interactions"),
+texreg::htmlreg(list(model1, model2, final.model, final.model4), digits = 3, single.row = T,
+              custom.model.names = c("Control only", "Control + Structural", "Final Model", "Interactions"),
               custom.coef.names = c("Edges (Intercept)", "Age (in-ties)", "Age (out-ties)",
                                     "Female (in-ties)", "Female (out-ties)", "Gender homophily",
                                     "Education (in-ties)", "Education (out-ties)",
@@ -516,11 +516,7 @@ screenreg(list(final.model, final.model4), digits = 3, single.row = T,
                                     "Talk freq (in-ties)", "Talk freq (out-ties)", 
                                     "Media use (in-ties)", "Media use (out-ties)",
                                     "Internal efficacy", 
-                                    "Consistency motivation (in-ties)", "Consistency motivation (out-ties)",
-                                    "Understanding motivation (in-ties)", "Understanding motivation (out-ties)", 
-                                    "Hedonic motivation (in-ties)", "Hedonic motivation (out-ties)", 
-                                    "Candidate pref = Moon (in-ties)", "Candidate pref = Moon (out-ties)", "Same candidate pref", 
-                                    "Similar policy pref", "Similar evaluative criteria",
+                                    
                                     "Isolates", "Reciprocity", "Previous communication",
                                     "Multiple two-paths (GWDSP, 1)", 
                                     "Delayed reciprocity", 
@@ -530,15 +526,25 @@ screenreg(list(final.model, final.model4), digits = 3, single.row = T,
                                     "Multiple path closure (GWESP-OTP, 3)", "Multiple cyclic closure (GWESP-ITP, 3)", 
                                     "Multiple activity closure (GWESP-OSP, 3)", "Multiple popularity closure (GWESP-ISP, 2)",
                                     "Activity spread (GW-outdegree, 2)", "Popularity spread (GW-indegree, 3)",
+                                    
+                                    "Consistency motivation (in-ties)", "Consistency motivation (out-ties)",
+                                    "Understanding motivation (in-ties)", "Understanding motivation (out-ties)", 
+                                    "Hedonic motivation (in-ties)", "Hedonic motivation (out-ties)", 
+                                    "Candidate pref = Moon (in-ties)", "Candidate pref = Moon (out-ties)", "Same candidate pref", 
+                                    "Similar policy pref", "Similar evaluative criteria",
+                                    
                                     "Transitive closure X alter more interested", 
                                     "Multiple activity closure X same candidate pref"),
               custom.note = " * 0 outside the 95% confidence interval based on 1000 replications", 
-              reorder.coef = c(1, 45:46, 17:27, 28:29,31,39:44, 30,32:38, 2:16),
-              groups = list("Additional interaction" = 2:3,
-                            "Motivation and Homophily" = 4:14,
+              reorder.coef = c(1, 34:46, 17:18,20,28:33, 19,21:27, 2:16),
+              groups = list("Motivation and Homophily" = 2:12,
+                            "Strcture X dyadic interaction" = 13:14,
                             "Endogenous structural effects" = 15:23,
                             "Lagged structural effects" = 24:31,
-                            "Controls" = 32:46))
+                            "Controls" = 32:46),
+              bold = 0.5, doctype = T, html.tag = T, body.tag = T, indentation = "  ",
+              caption = "",
+              file = "Table 1.July20.doc")
 
 
 ## -------------------------------------------- ##
@@ -622,5 +628,6 @@ screenreg(list(tr.qap, final.model, final.model.nothreshold), digits = 3,
                         "Endogenous structural effects" = 13:21,
                         "Lagged structural effects" = 22:29,
                         "Controls" = 30:44))
+          
 
 
