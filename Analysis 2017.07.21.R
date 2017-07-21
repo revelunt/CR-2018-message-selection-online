@@ -593,7 +593,7 @@ tr.qap@coef.names <- c("edges",
                        "mutual")
 
 
-screenreg(list(tr.qap, final.model, final.model.nothreshold), digits = 3, 
+htmlreg(list(tr.qap, final.model, final.model.nothreshold), digits = 3, 
           leading.zero = F, single.row = T,
           custom.model.names = c("MRQAP Model", "BTERG Model", "BTERGM non-threshold"),
           custom.coef.names = c("Edges (Intercept)",
@@ -627,7 +627,10 @@ screenreg(list(tr.qap, final.model, final.model.nothreshold), digits = 3,
           groups = list("Motivation and Homophily" = 2:12,
                         "Endogenous structural effects" = 13:21,
                         "Lagged structural effects" = 22:29,
-                        "Controls" = 30:44))
+                        "Controls" = 30:44),
+        bold = 0.5, doctype = T, html.tag = T, body.tag = T, indentation = "  ",
+        caption = "",
+        file = "Results.table.2.doc")
           
 
 
