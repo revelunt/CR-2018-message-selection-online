@@ -2,57 +2,74 @@
 rm(list = ls())
 options(scipen = 999)
 require(ergm)
-# save(g, g_relrecip, g_autoregression, policy.pref.diff, evaludative.criteria.diff, file = "R_data/ergm.test.Rdata")
-setwd("/Users/songh95/Dropbox/GitHub/Election2012Chatroom")
-source("data prep.R")
+require(btergm)
+require(texreg)
+require(parallel)
+
+# setwd("~/Dropbox/GitHub/Korean2012ElectionProject")
+source("dev/btergm helper-functions.R")
+source("dev/btergm (1) data prep.R")
 
 RNGkind("L'Ecuyer-CMRG")
 set.seed(12345, "L'Ecuyer")
 
 require(tergm)
 
+for (i in 1:3) {
+ g[[i]] %n% "autoregression" <- g_autoregression[[i]]
+ g[[i]] %n% "delrecip" <- g_delrecip[[i]]
+ g[[i]] %n% "lagtransitivity" <- g_lagtransitivity[[i]]
+ g[[i]] %n% "lagcyclic" <- g_lagcyclic[[i]]
+ g[[i]] %n% "policy.pref.sim" <- policy.pref.sim[[i]]
+ g[[i]] %n% "evaludative.criteria.sim" <- evaludative.criteria.sim[[i]]
+ g[[i]] %n% "lag_shared_activity" <- g_lag_shared_activity[[i]]
+ g[[i]] %n% "lag_shared_popularity" <- g_lag_shared_popularity[[i]]
+}
+
 stergm.model <- stergm(nw = g, formation =  ~ edges + nodeicov("age") + nodeocov("age") + 
-                                                 nodeifactor("gender") + nodeofactor("gender") + nodematch("gender") + 
+                                                 nodeifactor("gender") + nodeofactor("gender") + 
+                                                 nodematch("gender") + 
                                                  nodeicov("edu") + nodeocov("edu") + 
+                                                 nodeifactor("region_origin2") + nodeofactor("region_origin2") + 
+                                                 nodematch("region_origin2") + 
                                                  nodeicov("talk.freq") + nodeocov("talk.freq") + 
                                                  nodeicov("media.use.freq") + nodeocov("media.use.freq") + 
-                                                 nodecov("internal.efficacy") + nodecov("external.efficacy") + 
-                                                 edgecov(g_autoregression) + 
-                                                 edgecov(g_delrecip) + 
-                                                 edgecov(g_lagtransitivity) + 
-                                                 edgecov(g_lagcyclic) + 
+                                                 nodecov("internal.efficacy") +  
+                                                 edgecov("autoregression") + 
+                                                 edgecov("delrecip") + 
+                                                 edgecov("lagtransitivity") + 
+                                                 edgecov("lagcyclic") + 
+                                                 edgecov("lag_shared_activity") +
+                                                 edgecov("lag_shared_popularity") +
                                                  nodeocov("lagged.sender.effect") + 
                                                  nodeicov("lagged.receiver.effect") + 
                                                     isolates + 
                                                     mutual + 
-                                                    dgwesp(decay = 1, fixed = T, type = "OTP") + 
-                                                    dgwesp(decay = 1, fixed = T, type = "ITP") + 
-                                                    dgwesp(decay = 1, fixed = T, type = "OSP") + 
-                                                    dgwesp(decay = 1, fixed = T, type = "ISP") + 
-                                                    
-                                                    dgwdsp(decay = 1.5, fixed = T, type = "ITP") + 
-                                                    dgwdsp(decay = 1.5, fixed = T, type = "OSP") + 
-                                                    dgwdsp(decay = 1.5, fixed = T, type = "ISP") + 
-                                                    
-                                                    gwodegree(decay = 3, fixed = T) + 
-                                                    gwidegree(decay = 2, fixed = T) + 
+                                                    dgwesp(decay = 3, fixed = T, type = "OTP") + 
+                                                    dgwesp(decay = 3, fixed = T, type = "ITP") + 
+                                                    dgwesp(decay = 3, fixed = T, type = "OSP") + 
+                                                    dgwesp(decay = 2, fixed = T, type = "ISP") + 
+                                                    gwdsp(decay = 1, fixed = T) + 
+                                                    gwodegree(decay = 2, fixed = T) + 
+                                                    gwidegree(decay = 3, fixed = T) + 
                                                     
                                                     nodeicov("consistency.motivation") + nodeocov("consistency.motivation") + 
                                                     nodeicov("understanding.motivation") + nodeocov("understanding.motivation") + 
                                                     nodeicov("hedomic.motivation") + nodeocov("hedomic.motivation") + 
                                                     nodeicov("candidate.preference") + nodeocov("candidate.preference") + 
                                                     nodematch("candidate.preference") + 
-                                                    edgecov(policy.pref.sim) + 
-                                                    edgecov(evaludative.criteria.sim) + 
-                                                    nodeifactor("region_origin2") + 
-                                                    nodeofactor("region_origin2") + 
-                                                    nodematch("region_origin2"),
+                                                    edgecov("policy.pref.sim") + 
+                                                    edgecov("evaludative.criteria.sim")
+                                                    ,
                        dissolution = ~ edges + nodeicov("consistency.motivation") + nodeocov("consistency.motivation") + 
                          nodeicov("understanding.motivation") + nodeocov("understanding.motivation") + 
                          nodeicov("hedomic.motivation") + nodeocov("hedomic.motivation") + 
                          nodeicov("candidate.preference") + nodeocov("candidate.preference") + 
                          nodematch("candidate.preference") + 
-                         edgecov(policy.pref.sim) + 
-                         edgecov(evaludative.criteria.sim),
+                         edgecov("policy.pref.sim") + 
+                         edgecov("evaludative.criteria.sim"),
                        estimate = "CMLE", times = 1:3, 
-                       control = control.stergm(parallel = 8, parallel.type = "PSOCK", seed = 12345))
+                       control = control.stergm(CMLE.MCMC.burnin=50000,
+                                                CMLE.MCMC.interval=5000, 
+                                                #MCMC.samplesize=50000,
+                                                parallel = 8, parallel.type = "PSOCK", seed = 453243823))
