@@ -4,3 +4,4 @@
 .Ruserdata
 dev/*.RData
 R_results/*.RData
+*.Rdata

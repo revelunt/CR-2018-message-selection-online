@@ -30,7 +30,7 @@ stergm.model <- stergm(nw = g, formation =  ~ edges + nodeicov("age") + nodeocov
                                                  nodeifactor("gender") + nodeofactor("gender") + 
                                                  nodematch("gender") + 
                                                  nodeicov("edu") + nodeocov("edu") + 
-                                                 nodeifactor("region_origin2") + nodeofactor("region_origin2") + 
+                                                 #nodeifactor("region_origin2") + nodeofactor("region_origin2") + 
                                                  nodematch("region_origin2") + 
                                                  nodeicov("talk.freq") + nodeocov("talk.freq") + 
                                                  nodeicov("media.use.freq") + nodeocov("media.use.freq") + 
@@ -45,9 +45,9 @@ stergm.model <- stergm(nw = g, formation =  ~ edges + nodeicov("age") + nodeocov
                                                  nodeicov("lagged.receiver.effect") + 
                                                     isolates + 
                                                     mutual + 
-                                                    dgwesp(decay = 3, fixed = T, type = "OTP") + 
-                                                    dgwesp(decay = 3, fixed = T, type = "ITP") + 
-                                                    dgwesp(decay = 3, fixed = T, type = "OSP") + 
+                                                    dgwesp(decay = 3.2, fixed = T, type = "OTP") + 
+                                                    dgwesp(decay = 3.2, fixed = T, type = "ITP") + 
+                                                    dgwesp(decay = 3.2, fixed = T, type = "OSP") + 
                                                     dgwesp(decay = 2, fixed = T, type = "ISP") + 
                                                     gwdsp(decay = 1, fixed = T) + 
                                                     gwodegree(decay = 2, fixed = T) + 
@@ -61,15 +61,18 @@ stergm.model <- stergm(nw = g, formation =  ~ edges + nodeicov("age") + nodeocov
                                                     edgecov("policy.pref.sim") + 
                                                     edgecov("evaludative.criteria.sim")
                                                     ,
-                       dissolution = ~ edges + nodeicov("consistency.motivation") + nodeocov("consistency.motivation") + 
+                       dissolution = ~ edges + 
+                         
+                         nodeicov("consistency.motivation") + nodeocov("consistency.motivation") + 
                          nodeicov("understanding.motivation") + nodeocov("understanding.motivation") + 
                          nodeicov("hedomic.motivation") + nodeocov("hedomic.motivation") + 
-                         nodeicov("candidate.preference") + nodeocov("candidate.preference") + 
                          nodematch("candidate.preference") + 
                          edgecov("policy.pref.sim") + 
                          edgecov("evaludative.criteria.sim"),
                        estimate = "CMLE", times = 1:3, 
-                       control = control.stergm(CMLE.MCMC.burnin=50000,
-                                                CMLE.MCMC.interval=5000, 
+                       control = control.stergm(
+                                                CMLE.MCMC.burnin=1000000,
+                                                CMLE.MCMC.interval=50000, 
                                                 #MCMC.samplesize=50000,
-                                                parallel = 8, parallel.type = "PSOCK", seed = 453243823))
+                                                parallel = 8, parallel.type = "PSOCK", seed = 234765, 
+                                                init.form = coef(stergm.model$formation)))
