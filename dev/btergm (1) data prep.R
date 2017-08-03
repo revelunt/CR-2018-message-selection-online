@@ -140,6 +140,11 @@ g[[1]] %v% "thermo.diff" <- dat[vids, as.numeric(pv255) - as.numeric(pv254)]
 g[[2]] %v% "thermo.diff" <- dat[vids, as.numeric(kv38) - as.numeric(kv37)]
 g[[3]] %v% "thermo.diff" <- dat[vids, as.numeric(hv63) - as.numeric(hv62)]
 
+## preference strengths
+g[[1]] %v% "preference.strength" <- abs(g[[1]] %v% "thermo.diff")
+g[[2]] %v% "preference.strength" <- abs(g[[2]] %v% "thermo.diff")
+g[[3]] %v% "preference.strength" <- abs(g[[3]] %v% "thermo.diff")
+
 ## issue preference
 ## pv299 / kv39 / hv84: prefer big goverment and regulations
 ## pv303 / kv43 / hv88: prefer soft diplomatic stance with North Korea

@@ -296,14 +296,14 @@ effectsDocumentation(myeff) # See Manual section 12 for a detailed information
 
 
 ## Define the algorithm settings:
-myalgorithm <- sienaAlgorithmCreate(useStdInits = F, projname = "test.july05-Mac.txt", #diagonalize = 0,
-                                    condname = "discussion.net", cond=TRUE,
-                                    seed = 12345)
+myalgorithm <- sienaAlgorithmCreate(useStdInits = F, projname = "test.july05-Mac.txt", 
+                                    diagonalize = 0.2, doubleAveraging = 0,
+                                    seed = 43256423)
 
 # add baseline control effects for network evolution: age, gender, edu status, and pol.ideology
-myeff <- includeEffects(myeff, egoX, interaction1 = "interest")
+myeff <- includeEffects(myeff, RateX, interaction1 = "consistency.motivation", type = "rate")
 # myeff <- includeEffects(myeff, effFrom, name = "cand.pref.thermo", interaction1 = "interest")
-myeff <- includeEffects(myeff, egoX, interaction1 = "edu")
+myeff <- includeEffects(myeff, RateX, interaction1 = "understanding.motivation", type = "rate")
 # myeff <- includeEffects(myeff, effFrom, name = "cand.pref.thermo", interaction1 = "edu")
 
 # myeff <- includeEffects(myeff, diffX, interaction1 = "pol.ideology") ## simialr ideology (less difference)
