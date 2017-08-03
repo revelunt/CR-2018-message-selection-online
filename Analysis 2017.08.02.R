@@ -413,7 +413,10 @@ ggplot(mean.pb, aes(x = indegree, y = mean.pb, fill = time)) +
 ## Additional interaction model ##
 ## ---------------------------- ##
 
+source("interaction test 2017.08.02.R")
+summary(final.model4)
 
+# save(final.model4, file = "R_results/final.model.interaction.(nonsig).Rdata")
 
 ## -------------------------------------------- ##
 ## Comparion with MRQAP and non-threshold model ##
