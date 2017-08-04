@@ -60,12 +60,6 @@ setMethod(f = "confint", signature = "btergm", definition = function(object,
                    " replications (", perc, "%) are dropped from CI estimation."))
   }
   
-  
-  object@boot$t <- object@boot$t[complete.cases(object@boot$t), ]
-  object@boot$R <- n.ret
-  
-  
-  
   if (invlogit == TRUE) {
     object@boot$t <- apply(object@boot$t, 1:2, function(x) 1 / (1 + exp(-x)))
     object@boot$t0 <- sapply(object@boot$t0, function(x) 1 / (1 + exp(-x)))

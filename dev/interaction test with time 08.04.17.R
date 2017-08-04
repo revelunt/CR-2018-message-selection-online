@@ -194,6 +194,8 @@ final.model6 <- btergm(g ~ edges + ## intercept
 
 cbind(coef(final.model6), t(apply(final.model6@boot$t, 2, quantile, c(0.025, 0.975), na.rm = T)))
 
+## all models at once
+## screenreg(list(final.model4, final.model5, final.model6), single.row = T, digits = 3)
 save(final.model4, final.model5, final.model6, file = "R_results/interaction.time.Aug.04.Rdata")
 
 # ============================================================================================================================================
@@ -252,3 +254,36 @@ save(final.model4, final.model5, final.model6, file = "R_results/interaction.tim
 #               Num. obs.                                        291096                         291096                         291096                       
 # ============================================================================================================================================
 #   * 0 outside the confidence interval
+
+texreg::htmlreg(list(final.model4, final.model5, final.model6), digits = 3, leading.zero = F, single.row = T,
+                custom.model.names = c("candidate.pref.interaction", "eval.criteria.interaction", "policy.pref.interaction"),
+                custom.coef.names = c("Edges (Intercept)", "Age (in-ties)", "Age (out-ties)",
+                                      "Female (in-ties)", "Female (out-ties)", "Gender homophily",
+                                      "Education (in-ties)", "Education (out-ties)",
+                                      "Regional origin = Seoul (in-ties)",
+                                      "Regional origin = Seoul (out-ties)",
+                                      "Regional homophily (Seoul)",
+                                      "Talk freq (in-ties)", "Talk freq (out-ties)", 
+                                      "Media use (in-ties)", "Media use (out-ties)",
+                                      "Internal efficacy (in-ties)", "Internal efficacy (out-ties)",
+                                      "Candidate pref = Moon (in-ties)", "Candidate pref = Moon (out-ties)",
+                                      "Consistency motivation (in-ties)", "Consistency motivation (out-ties)",
+                                      "Understanding motivation (in-ties)", "Understanding motivation (out-ties)", 
+                                      "Hedonic motivation (in-ties)", "Hedonic motivation (out-ties)", 
+                                      "Same candidate pref", "Similar policy pref", "Similar evaluative criteria",
+                                      "Isolates", "Reciprocity", "Previous communication",
+                                      "Multiple two-paths (GWDSP, 1)", 
+                                      "Delayed reciprocity", 
+                                      "Delayed transitivity closure", "Delayed cyclic closure", 
+                                      "Delayed activity closure", "Delayed popularity closure",
+                                      "Persistent sender (out-tie)", "Persistent receiver (in-ties)",
+                                      "Multiple path closure (GWESP-OTP, 3)", "Multiple cyclic closure (GWESP-ITP, 3)", 
+                                      "Multiple activity closure (GWESP-OSP, 3)", "Multiple popularity closure (GWESP-ISP, 2)",
+                                      "Activity spread (GW-outdegree, 2)", "Popularity spread (GW-indegree, 3)",
+                                      "time trends (linear)", "time X same.canddiate.pref", 
+                                      "time X evaluative criteria similarity", "time X policy pref similarity"),
+                custom.note = " * 0 outside the 95% confidence interval", 
+                
+                bold = 0.5, doctype = T, html.tag = T, body.tag = T, indentation = "  ",
+                caption = "",
+                file = "results.Table2.Aug04.doc")

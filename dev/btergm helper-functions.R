@@ -558,3 +558,66 @@ z.var <- function(var) {
   z.var <- (var - mean)/sd
   z.var
 }
+
+
+## function to bypass the warnings when requesting the summary of models in which number of bootstraps are dropped due to insufficient variation
+
+
+setMethod(f = "confint", signature = "btergm", definition = function(object, 
+                                                                     parm, level = 0.95, type = "perc", invlogit = FALSE, na.rm = TRUE, ...) {
+  cf <- coef(object, invlogit = invlogit)
+  pnames <- names(cf)
+  if (missing(parm)) {
+    parm <- pnames
+  } else if (is.numeric(parm)) {
+    parm <- pnames[parm]
+  }
+  n.orig <- nrow(object@boot$t)
+  n.ret <- nrow(object@boot$t[complete.cases(object@boot$t), ])
+  perc <- 100 * (n.orig - n.ret) / n.orig
+  if (n.orig != n.ret) {
+    warning(paste0("Too little variation in the model. ", n.orig - n.ret, 
+                   " replications (", perc, "%) are dropped from CI estimation."))
+  }
+  
+  if (invlogit == TRUE) {
+    object@boot$t <- apply(object@boot$t, 1:2, function(x) 1 / (1 + exp(-x)))
+    object@boot$t0 <- sapply(object@boot$t0, function(x) 1 / (1 + exp(-x)))
+  }
+  if (type == "perc") {
+    type2 <- "percent"
+  } else if (type == "norm") {
+    type2 <- "normal"
+  } else if (type == "basic") {
+    type2 <- "basic"
+  } else if (type == "stud") {
+    type2 <- "student"
+  } else if (type == "bca") {
+    type2 <- "bca"
+  } else {
+    stop(paste("'type' not supported. Use 'perc', 'bca', 'norm', 'basic',", 
+               "or 'stud'."))
+  }
+  ci <- sapply(1:length(cf), function(x) {
+    b <- boot::boot.ci(object@boot, conf = level, type = type, index = x, na.rm = T)
+    b[[type2]][4:5]
+  })
+  ci <- cbind(cf, t(ci))
+  if (class(ci) == "numeric") {
+    ci.nam <- names(ci)
+    ci <- matrix(ci, nrow = 1)
+    colnames(ci) <- ci.nam
+    rownames(ci) <- names(cf)
+  }
+  ci <- ci[parm, ]
+  if (class(ci) != "matrix") {
+    ci <- matrix(ci, ncol = 3)
+    rownames(ci) <- parm
+  }
+  label1 <- paste0(100 * (1 - level) / 2, "%")
+  label2 <- paste0(100 * (1 - (1 - level) / 2), "%")
+  colnames(ci) <- c("Estimate", label1, label2)
+  return(ci)
+}
+)
+
