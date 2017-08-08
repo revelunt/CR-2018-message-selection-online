@@ -621,3 +621,34 @@ setMethod(f = "confint", signature = "btergm", definition = function(object,
 }
 )
 
+## function to recover percentage CI and bias-corrected CIs
+require(boot)
+
+perc.ci <- function(t, conf = 0.95, hinv = function(t) t) {
+  alpha <- (1 + c(-conf, conf))/2
+  qq <- boot:::norm.inter(t, alpha)
+  out <- cbind(conf, matrix(qq[, 1L], ncol = 2L), matrix(hinv(qq[,2]), ncol = 2L))
+  out[,4:5]
+}
+
+bca.ci <- function(dat, conf = 0.95, index = 1, t0 = mean(dat, na.rm = T),  t = NULL, L = NULL,
+                   h = function(t) t, hdot = function(t) 1, hinv = function(t) t, ...) {
+  t.o <- t
+  t <- dat
+  
+  t <- t[is.finite(t)]
+  w <- qnorm(sum(t < t0)/length(t))
+  if (!is.finite(w)) 
+    stop("estimated adjustment 'w' is infinite")
+  alpha <- (1 + c(-conf, conf))/2
+  zalpha <- qnorm(alpha)
+  if (is.null(L)) 
+    L <- mean(dat, na.rm = T) - t0 ## bias
+  a <- sum(L^3)/(6 * sum(L^2)^1.5)
+  if (!is.finite(a)) 
+    stop("estimated adjustment 'a' is NA")
+  adj.alpha <- pnorm(w + (w + zalpha)/(1 - a * (w + zalpha)))
+  qq <- boot:::norm.inter(t, adj.alpha)
+  out <- cbind(conf, matrix(qq[, 1L], ncol = 2L), matrix(hinv(h(qq[, 2L])), ncol = 2L))
+  out[4:5]
+}
