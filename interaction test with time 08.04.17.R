@@ -304,31 +304,36 @@ texreg::htmlreg(list(final.model4, final.model5, final.model6), digits = 3, lead
 
 
 
+# 
+# 
 # n_time <- length(g)
 # n_samps <- 1000
-# mc.cores <- 8
 # model <- final.model4
+# 
+# ep <- edgeprob(final.model4)
 # 
 # est <- data.frame(t = rep(1:3, each = 2),
 #                   match = rep(0:1, 3),
-#                   est = rep(NA, 6), 
+#                   est = rep(NA, 6),
 #                   lower = rep(NA, 6),
 #                   upper = rep(NA, 6)
 #                   )
 # 
+# setDT(ep)
+# 
 # for (time in 1:n_time) {
-#   
+# 
 #   pn <- g[[time]]
 #   pf <- same_candidate_preference[[time]]
 #   d <- dim(as.matrix(pn))
 #   size <- d[1] * d[2]
 #   nw <- matrix(1:size, nrow = d[1], ncol = d[2])
-#   
+# 
 #   ## dyads with nodematch == 1
 #   nw.1 <- nw[pf == 1]
 #   #nw.1 <- nw.1[lower.tri(nw.1)]
 #   nw.1 <- sample(nw.1, n_samps, replace = TRUE)
-#   
+# 
 #   ## dyads with nodematch == 0
 #   nw.0 <- nw[pf == 0]
 #   #nw.0 <- nw.0[lower.tri(nw.0)]
@@ -337,28 +342,29 @@ texreg::htmlreg(list(final.model4, final.model5, final.model6), digits = 3, lead
 #   ## dyadic probability given the network and model, for dyads with nodematch == 1
 #     est.match.1 <- mclapply(1:n_samps, function(n) {
 #       dyad <- arrayInd(nw.1[n], d)
-#       i <- dyad[1, 1]
-#       j <- dyad[1, 2]
-#       int.est <- btergm::interpret(model, type = "tie", i = i, j = j, t = time)[[1]]
+#       sender <- dyad[1, 1]
+#       receiver <- dyad[1, 2]
+#       int.est <- ep[i == sender & j == receiver & t == time, probability]
 #       int.est
-#     }, mc.cores = mc.cores)
+#     }, mc.cores = 4)
 # 
 #   ## dyadic probability given the network and model, for dyads with nodematch == 0
-#     est.match.0 <- mclapply(1:100, function(n) {
+#     est.match.0 <- mclapply(1:n_samps, function(n) {
 #       dyad <- arrayInd(nw.0[n], d)
-#       i <- dyad[1, 1]
-#       j <- dyad[1, 2]
-#       int.est <- btergm::interpret(model, type = "tie", i = i, j = j, t = time)[[1]]
+#       sender <- dyad[1, 1]
+#       receiver <- dyad[1, 2]
+#       int.est <- ep[i == sender & j == receiver & t == time, probability]
 #       int.est
-#     }, mc.cores = mc.cores)
-#     
+#     }, mc.cores = 4)
+# 
 #     est[(time*2 - 1), 3] <- mean(unlist(est.match.0)) ## mean probability for match == 0
 #     est[(time*2 - 1), 4:5] <- quantile(unlist(est.match.0), c(0.025, 0.975)) ## 95% CIs
-#     
+# 
 #     est[(time*2), 3] <- mean(unlist(est.match.1)) ## mean probability for match == 1
 #     est[(time*2), 4:5] <- quantile(unlist(est.match.1), c(0.025, 0.975)) ## 95% CIs
-#   
+# 
 #   }
+
 # 
 # ggplot(data = est, aes(x = t, y = est, fill = factor(match))) + 
 #   geom_bar(stat = "identity", position = position_dodge()) + 
@@ -383,6 +389,11 @@ for (i in 1:ncol(ep)) {
   }
 }
 
+## identify change statistics for main vars and interaction var
+var1 <- "nodematch.candidate.preference"
+var2 <- "edgecov.timecov1"
+inter <- "edgecov.timecov2.same_candidate_preference"
+
 ## get coefficients
 beta1 <- co[match(var1, names(co))]
 beta2 <- co[match(var2, names(co))]
@@ -400,7 +411,7 @@ ep$X1X2 <- ep$edgecov.timecov2.same_candidate_preference
 ep$logodds <- with(ep, edges * coef(final.model4)[1] + beta1 * X1 + beta2 * X2 + beta3 * X1X2) ## add intercept
 ep$predprob <- with(ep, c(1 / (1 + exp(-logodds))))
 
-ep$X1 <- recode(ep$X1, "0 = 'Different'; 1 = 'Same'")
+ep$X1 <- car::recode(ep$X1, "0 = 'Different'; 1 = 'Same'")
 
 ## model-implied predicted probability conditional on time trends
 p.inter.mn <- ggplot(data = ep, aes(x = X2, y = predprob, colour = factor(X1))) + theme_bw() + 
@@ -409,11 +420,6 @@ p.inter.mn <- ggplot(data = ep, aes(x = X2, y = predprob, colour = factor(X1))) 
   geom_line(stat = "identity", size = 1.5) + labs(colour = "Candidate preference") + 
   xlab("Time trends") + ylab("Predicted edge probability") + 
   ggtitle("Panel A: Main effect of candidate preference homophily")
-
-## identify change statistics for main vars and interaction var
-var1 <- "nodematch.candidate.preference"
-var2 <- "edgecov.timecov1"
-inter <- "edgecov.timecov2.same_candidate_preference"
 
 ## how many unique change statistics in modertor?
 v2 <- sort(unlist(unique(ep['edgecov.timecov1'])))

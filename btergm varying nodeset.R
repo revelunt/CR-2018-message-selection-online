@@ -219,7 +219,10 @@ for (i in 1:length(g)) {
                                                   outer(g[[i]] %v% "criteria.background", g[[i]] %v% "criteria.background", "-")^2))
 }
 
-g[[1]] <- NULL
+isolates <- lapply(g, sna::isolates)
+
+g_test <- lapply(1:length(g), function(i) network::delete.vertices(g[[i]], isolates[[i]])
+g_test[[1]] <- NULL
 
 final.model.r <- btergm(g ~ edges + ## intercept
                         
@@ -273,4 +276,4 @@ final.model.r <- btergm(g ~ edges + ## intercept
                         gwodegree(decay = 2, fixed = T) + ## hedonic
                         gwidegree(decay = 3, fixed = T), ## hedonic 
                       
-                      verbose = T, R = 500, ncpus = 6, parallel = "multicore"); summary(final.model.r)
+                      verbose = T, R = 100, ncpus = 6, parallel = "multicore"); summary(final.model.r)
