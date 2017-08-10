@@ -51,15 +51,135 @@ ocov.consistency  <- lapply(1:3, function(i) {
   diag(temp1.t) <- 0
   temp1.t})
 
-ocov.consistency.X.time.X.preference <- lapply(1:3, function(i) {
-  temp1.t <- ocov.consistency[[i]] * time_trends[[i]] * same_candidate_preference[[i]]
+ocov.understanding  <- lapply(1:3, function(i) {
+  temp1.t <- ergmMPLE(g[[i]] ~ nodeocov("understanding.motivation"), output = "array")$predictor[,,1]
+  dimnames(temp1.t) <- NULL
+  diag(temp1.t) <- 0
+  temp1.t})
+
+ocov.consistency.X.time <- lapply(1:3, function(i) {
+  temp1.t <- ocov.consistency[[i]] * time_trends[[i]]
+  dimnames(temp1.t) <- NULL
+  diag(temp1.t) <- 0
+  temp1.t})
+
+ocov.understanding.X.time <- lapply(1:3, function(i) {
+  temp1.t <- ocov.understanding[[i]] * time_trends[[i]]
+  dimnames(temp1.t) <- NULL
+  diag(temp1.t) <- 0
+  temp1.t})
+
+ocov.consistency.X.preference.Moon <- lapply(1:3, function(i) {
+  temp1.t <- ocov.consistency[[i]] * same_candidate_preference_Moon[[i]]
+  diag(temp1.t) <- 0
+  temp1.t
+})
+
+ocov.understanding.X.preference.Moon <- lapply(1:3, function(i) {
+  temp1.t <- ocov.understanding[[i]] * same_candidate_preference_Moon[[i]]
+  diag(temp1.t) <- 0
+  temp1.t
+})
+
+ocov.consistency.X.preference.Park <- lapply(1:3, function(i) {
+  temp1.t <- ocov.consistency[[i]] * same_candidate_preference_Moon[[i]]
+  diag(temp1.t) <- 0
+  temp1.t
+})
+
+ocov.understanding.X.preference.Park <- lapply(1:3, function(i) {
+  temp1.t <- ocov.understanding[[i]] * same_candidate_preference_Moon[[i]]
+  diag(temp1.t) <- 0
+  temp1.t
+})
+
+ocov.consistency.X.time.X.preference.Moon <- lapply(1:3, function(i) {
+  temp1.t <- ocov.consistency[[i]] * same_candidate_preference_Park[[i]]
+  diag(temp1.t) <- 0
+  temp1.t
+})
+
+ocov.understanding.X.time.X.preference.Moon <- lapply(1:3, function(i) {
+  temp1.t <- ocov.understanding[[i]] * same_candidate_preference_Park[[i]]
+  diag(temp1.t) <- 0
+  temp1.t
+})
+
+ocov.consistency.X.time.X.preference.Park <- lapply(1:3, function(i) {
+  temp1.t <- ocov.consistency[[i]] * time_trends[[i]] * same_candidate_preference_Park[[i]]
+  diag(temp1.t) <- 0
+  temp1.t
+})
+
+ocov.understandingy.X.time.X.preference.Park <- lapply(1:3, function(i) {
+  temp1.t <- ocov.understanding[[i]] * time_trends[[i]] * same_candidate_preference_Park[[i]]
   diag(temp1.t) <- 0
   temp1.t
 })
 
 
 ## same_candidate_preference interaction model
+## same_candidate_preference interaction model
 
+final.model4 <- btergm(g ~ edges + ## intercept
+                         
+                         ## demographic controls
+                         nodeicov("age") + nodeocov("age") + 
+                         nodeifactor("gender") + nodeofactor("gender") + nodematch("gender") + 
+                         nodeicov("edu") + nodeocov("edu") + 
+                         nodeifactor("region_origin2") + 
+                         nodeofactor("region_origin2") + 
+                         nodematch("region_origin2") +   
+                         
+                         ## political discussion-related controls
+                         nodeicov("talk.freq") + nodeocov("talk.freq") + 
+                         nodeicov("media.use.freq") + nodeocov("media.use.freq") + 
+                         nodeicov("internal.efficacy") + nodeocov("internal.efficacy") +
+                         nodeifactor("candidate.preference") + nodeofactor("candidate.preference") + 
+                         
+                         ## individual, motivation factor
+                         nodeicov("consistency.motivation") + nodeocov("consistency.motivation") + 
+                         nodeicov("understanding.motivation") + nodeocov("understanding.motivation") + 
+                         nodeicov("hedomic.motivation") + nodeocov("hedomic.motivation") + 
+                         
+                         ## dyadic, consistency
+                         nodematch("candidate.preference") + 
+                         edgecov(policy.pref.sim) +
+                         
+                         ## dyadic, understanding
+                         edgecov(evaludative.criteria.sim) +
+                         
+                         ## endogenous and lagged structural, control
+                         isolates + mutual + 
+                         edgecov(g_autoregression) + 
+                         gwdsp(decay = 1, fixed = T) + 
+                         
+                         ## lagged structural, control
+                         edgecov(g_delrecip) + 
+                         edgecov(g_lagtransitivity) + ## lagged gwesp_OTP
+                         edgecov(g_lagcyclic) + ## lagged gwesp_ITP
+                         edgecov(g_lag_shared_activity) + ## lagged gwesp_OSP
+                         edgecov(g_lag_shared_popularity) + ## lagged gwesp_ISP
+                         nodeocov("lagged.sender.effect") + 
+                         nodeicov("lagged.receiver.effect") + 
+                         
+                         ## endogenous structural
+                         dgwesp(decay = 3, fixed = T, type = "OTP") + ## 3 or 1.5 understanding
+                         dgwesp(decay = 3, fixed = T, type = "ITP") + ## 3 or 1.5 understanding
+                         dgwesp(decay = 3, fixed = T, type = "OSP") + ## 3 or 1.5 consistency
+                         dgwesp(decay = 2, fixed = T, type = "ISP") + ## 3 or 1.5 consistency
+                         
+                         gwodegree(decay = 2, fixed = T) + ## hedonic
+                         gwidegree(decay = 3, fixed = T) + ## hedonic 
+                         
+                         ## interaction terms
+                         edgecov(time_trends) + #timecov(transform = function(t) t - 1) +
+                         edgecov(time.X.same.candidate.preference), # timecov(same_candidate_preference, transform = function(t) t - 1),
+                       
+                       R = 1000, parallel = "multicore", ncpus = 10); 
+
+
+## does the candidate preferece homophily change differently over time depending on candidate?
 final.model4.r <- btergm(g ~ edges + ## intercept
                          
                          ## demographic controls
@@ -115,75 +235,198 @@ final.model4.r <- btergm(g ~ edges + ## intercept
                          ## interaction terms
                          edgecov(time_trends) +
                          edgecov(time.X.same.candidate.preference_Park) + 
-                         edgecov(time.X.same.candidate.preference_Moon)
+                         edgecov(time.X.same.candidate.preference_Moon) ## significant! 
                        ,
                        R = 1000, parallel = "multicore", ncpus = 5); 
 
  ## summary.methods does not work in some cases, therefore bypass the summary methods and get the same info
 cbind(coef(final.model4), t(apply(final.model4@boot$t, 2, quantile, c(0.025, 0.975), na.rm = T)))
 
-# three-way interaction (not significant)
-final.model5.r <- btergm(g ~ edges + ## intercept
+# Estimates and 95% confidence intervals:
+#                                                     Estimate    2.5%   97.5%
+# edges                                              -1.7475029 -2.7466 -0.3872
+# nodeicov.age                                       -0.0024648 -0.0255  0.0391
+# nodeocov.age                                        0.0388303 -0.1873  0.0860
+# nodeifactor.gender.1                                0.0088896 -0.0387  0.0710
+# nodeofactor.gender.1                                0.0306040 -0.3380  0.3291
+# nodematch.gender                                    0.0446009  0.0148  0.0873
+# nodeicov.edu                                       -0.0089141 -0.0385  0.0173
+# nodeocov.edu                                        0.0156914 -0.0151  0.0935
+# nodeifactor.region_origin2.1                       -0.0823721 -0.1613  0.0420
+# nodeofactor.region_origin2.1                       -0.1419545 -0.5949  0.3599
+# nodematch.region_origin2                            0.0147253 -0.0143  0.0806
+# nodeicov.talk.freq                                  0.0308668  0.0027  0.0379
+# nodeocov.talk.freq                                 -0.0030359 -0.1318  0.1602
+# nodeicov.media.use.freq                            -0.0174555 -0.0239  0.0213
+# nodeocov.media.use.freq                             0.0244576 -0.0157  0.2892
+# nodeicov.internal.efficacy                         -0.0125512 -0.0580  0.0546
+# nodeocov.internal.efficacy                          0.0280216 -0.1035  0.1228
+# nodeicov.consistency.motivation                     0.0370826 -0.0220  0.1173
+# nodeocov.consistency.motivation                     0.0194295 -0.1188  0.0736
+# nodeicov.understanding.motivation                  -0.0492897 -0.1102  0.0243
+# nodeocov.understanding.motivation                   0.0384213  0.0162  0.0947
+# nodeicov.hedomic.motivation                        -0.0119503 -0.0397  0.0002
+# nodeocov.hedomic.motivation                         0.1033045  0.0944  0.1333
+# edgecov.same_candidate_preference_Park[[i]]         0.0257782 -0.1505  0.6809
+# edgecov.same_candidate_preference_Moon[[i]]        -0.1060835 -0.3283 -0.0080
+# edgecov.policy.pref.sim[[i]]                       -0.0852138 -0.2172  0.0318
+# edgecov.evaludative.criteria.sim[[i]]               0.3826920  0.1949  0.4053
+# isolates                                            0.9956819  0.7979  1.2623
+# mutual                                              0.7690782  0.5083  1.0703
+# edgecov.g_autoregression[[i]]                       0.2203686  0.1848  0.2505
+# gwdsp.fixed.1                                       0.0027172 -0.0072  0.0094
+# edgecov.g_delrecip[[i]]                             0.0748650 -0.0699  0.3445
+# edgecov.g_lagtransitivity[[i]]                      0.0325575  0.0187  0.0507
+# edgecov.g_lagcyclic[[i]]                            0.0318598  0.0081  0.0564
+# edgecov.g_lag_shared_activity[[i]]                 -0.0548970 -0.0672 -0.0352
+# edgecov.g_lag_shared_popularity[[i]]               -0.0582168 -0.1091 -0.0331
+# nodeocov.lagged.sender.effect                       0.0192357  0.0097  0.0286
+# nodeicov.lagged.receiver.effect                     0.0233474  0.0185  0.0378
+# gwesp.OTP.fixed.3                                   0.0571584 -0.0526  0.1246
+# gwesp.ITP.fixed.3                                  -0.0653805 -0.0802 -0.0603
+# gwesp.OSP.fixed.3                                   0.0350753  0.0325  0.0528
+# gwesp.ISP.fixed.2                                   0.1135429  0.0821  0.2317
+# gwodegree                                          -4.4053738 -4.5610 -4.0055
+# gwidegree                                          -4.1301383 -5.3218 -3.2438
+# edgecov.time_trends[[i]]                            0.0774395 -0.0604  0.2598
+# edgecov.time.X.same.candidate.preference_Park[[i]] -0.0680975 -0.4268  0.2169
+# edgecov.time.X.same.candidate.preference_Moon[[i]]  0.0848770  0.0117  0.1910
+
+# three-way interaction (whether the pattern is more pronounced among those with higher consistency motivation?)
+# if positive, then it suggests people may more rely on confirmative evidence to reduce uncertainty 
+final.model4.r2 <- btergm(g ~ edges + ## intercept
                          
-                         ## demographic controls
-                         nodeicov("age") + nodeocov("age") + 
-                         nodeifactor("gender") + nodeofactor("gender") + nodematch("gender") + 
-                         nodeicov("edu") + nodeocov("edu") + 
-                         nodeifactor("region_origin2") + 
-                         nodeofactor("region_origin2") + 
-                         nodematch("region_origin2") +   
+                            ## demographic controls
+                            nodeicov("age") + nodeocov("age") + 
+                            nodeifactor("gender") + nodeofactor("gender") + nodematch("gender") + 
+                            nodeicov("edu") + nodeocov("edu") + 
+                            nodeifactor("region_origin2") + 
+                            nodeofactor("region_origin2") + 
+                            nodematch("region_origin2") +   
+                            
+                            ## political discussion-related controls
+                            nodeicov("talk.freq") + nodeocov("talk.freq") + 
+                            nodeicov("media.use.freq") + nodeocov("media.use.freq") + 
+                            nodeicov("internal.efficacy") + nodeocov("internal.efficacy") +
+                            #nodeifactor("candidate.preference") + nodeofactor("candidate.preference") + 
+                            
+                            ## individual, motivation factor
+                            nodeicov("consistency.motivation") + nodeocov("consistency.motivation") + 
+                            nodeicov("understanding.motivation") + nodeocov("understanding.motivation") + 
+                            nodeicov("hedomic.motivation") + nodeocov("hedomic.motivation") + 
+                            
+                            ## dyadic, consistency
+                            edgecov(same_candidate_preference_Park) + 
+                            edgecov(same_candidate_preference_Moon) + 
+                            edgecov(policy.pref.sim) +
+                            
+                            ## dyadic, understanding
+                            edgecov(evaludative.criteria.sim) +
+                            
+                            ## endogenous and lagged structural, control
+                            isolates + mutual + 
+                            edgecov(g_autoregression) + 
+                            gwdsp(decay = 1, fixed = T) + 
+                            
+                            ## lagged structural, control
+                            edgecov(g_delrecip) + 
+                            edgecov(g_lagtransitivity) + ## lagged gwesp_OTP
+                            edgecov(g_lagcyclic) + ## lagged gwesp_ITP
+                            edgecov(g_lag_shared_activity) + ## lagged gwesp_OSP
+                            edgecov(g_lag_shared_popularity) + ## lagged gwesp_ISP
+                            nodeocov("lagged.sender.effect") + 
+                            nodeicov("lagged.receiver.effect") + 
+                            
+                            ## endogenous structural
+                            dgwesp(decay = 3, fixed = T, type = "OTP") + ## 3 or 1.5 understanding
+                            dgwesp(decay = 3, fixed = T, type = "ITP") + ## 3 or 1.5 understanding
+                            dgwesp(decay = 3, fixed = T, type = "OSP") + ## 3 or 1.5 consistency
+                            dgwesp(decay = 2, fixed = T, type = "ISP") + ## 3 or 1.5 consistency
+                            
+                            gwodegree(decay = 2, fixed = T) + ## hedonic
+                            gwidegree(decay = 3, fixed = T) + ## hedonic 
+                            
+                            ## interaction terms
+                            edgecov(time_trends) + edgecov(ocov.consistency.X.time) + 
+                            #edgecov(time.X.same.candidate.preference_Park) + 
+                            edgecov(time.X.same.candidate.preference_Moon) + 
+                            #edgecov(ocov.consistency.X.preference.Park) + 
+                            edgecov(ocov.consistency.X.preference.Moon) + 
+                            #edgecov(ocov.consistency.X.time.X.preference.Park) + 
+                            edgecov(ocov.consistency.X.time.X.preference.Moon)
+                          ,
                          
-                         ## political discussion-related controls
-                         nodeicov("talk.freq") + nodeocov("talk.freq") + 
-                         nodeicov("media.use.freq") + nodeocov("media.use.freq") + 
-                         nodeicov("internal.efficacy") + nodeocov("internal.efficacy") +
-                         # nodeifactor("candidate.preference") + nodeofactor("candidate.preference") + 
-                         
-                         ## individual, motivation factor
-                         nodeicov("consistency.motivation") + nodeocov("consistency.motivation") + 
-                         nodeicov("understanding.motivation") + nodeocov("understanding.motivation") + 
-                         nodeicov("hedomic.motivation") + nodeocov("hedomic.motivation") + 
-                         
-                         ## dyadic, consistency
-                         nodematch("candidate.preference") + 
-                         edgecov(policy.pref.sim) +
-                         
-                         ## dyadic, understanding
-                         edgecov(evaludative.criteria.sim) +
-                         
-                         ## endogenous and lagged structural, control
-                         isolates + mutual + 
-                         edgecov(g_autoregression) + 
-                         gwdsp(decay = 1, fixed = T) + 
-                         
-                         ## lagged structural, control
-                         edgecov(g_delrecip) + 
-                         edgecov(g_lagtransitivity) + ## lagged gwesp_OTP
-                         edgecov(g_lagcyclic) + ## lagged gwesp_ITP
-                         edgecov(g_lag_shared_activity) + ## lagged gwesp_OSP
-                         edgecov(g_lag_shared_popularity) + ## lagged gwesp_ISP
-                         nodeocov("lagged.sender.effect") + 
-                         nodeicov("lagged.receiver.effect") + 
-                         
-                         ## endogenous structural
-                         dgwesp(decay = 3, fixed = T, type = "OTP") + ## 3 or 1.5 understanding
-                         dgwesp(decay = 3, fixed = T, type = "ITP") + ## 3 or 1.5 understanding
-                         dgwesp(decay = 3, fixed = T, type = "OSP") + ## 3 or 1.5 consistency
-                         dgwesp(decay = 2, fixed = T, type = "ISP") + ## 3 or 1.5 consistency
-                         
-                         gwodegree(decay = 2, fixed = T) + ## hedonic
-                         gwidegree(decay = 3, fixed = T) + ## hedonic 
-                         
-                         
-                         ## interaction terms
-                         edgecov(time_trends) +
-                         edgecov(time.X.same.candidate.preference) + 
-                         edgecov(ocov.consistency.X.time.X.preference)
-                       ,
-                         
-                       R = 1000, parallel = "multicore", ncpus = parallel::detectCores())
+                       R = 1000, parallel = "snow", ncpus = 6)
 
 cbind(coef(final.model5), t(apply(final.model5@boot$t, 2, quantile, c(0.025, 0.975), na.rm = T)))
+
+## interaction with understanding motivation? (THERE's NO interaction)
+final.model4.r3 <- btergm(g ~ edges + ## intercept
+                            
+                            ## demographic controls
+                            nodeicov("age") + nodeocov("age") + 
+                            nodeifactor("gender") + nodeofactor("gender") + nodematch("gender") + 
+                            nodeicov("edu") + nodeocov("edu") + 
+                            nodeifactor("region_origin2") + 
+                            nodeofactor("region_origin2") + 
+                            nodematch("region_origin2") +   
+                            
+                            ## political discussion-related controls
+                            nodeicov("talk.freq") + nodeocov("talk.freq") + 
+                            nodeicov("media.use.freq") + nodeocov("media.use.freq") + 
+                            nodeicov("internal.efficacy") + nodeocov("internal.efficacy") +
+                            #nodeifactor("candidate.preference") + nodeofactor("candidate.preference") + 
+                            
+                            ## individual, motivation factor
+                            nodeicov("consistency.motivation") + nodeocov("consistency.motivation") + 
+                            nodeicov("understanding.motivation") + nodeocov("understanding.motivation") + 
+                            nodeicov("hedomic.motivation") + nodeocov("hedomic.motivation") + 
+                            
+                            ## dyadic, consistency
+                            edgecov(same_candidate_preference_Park) + 
+                            edgecov(same_candidate_preference_Moon) + 
+                            edgecov(policy.pref.sim) +
+                            
+                            ## dyadic, understanding
+                            edgecov(evaludative.criteria.sim) +
+                            
+                            ## endogenous and lagged structural, control
+                            isolates + mutual + 
+                            edgecov(g_autoregression) + 
+                            gwdsp(decay = 1, fixed = T) + 
+                            
+                            ## lagged structural, control
+                            edgecov(g_delrecip) + 
+                            edgecov(g_lagtransitivity) + ## lagged gwesp_OTP
+                            edgecov(g_lagcyclic) + ## lagged gwesp_ITP
+                            edgecov(g_lag_shared_activity) + ## lagged gwesp_OSP
+                            edgecov(g_lag_shared_popularity) + ## lagged gwesp_ISP
+                            nodeocov("lagged.sender.effect") + 
+                            nodeicov("lagged.receiver.effect") + 
+                            
+                            ## endogenous structural
+                            dgwesp(decay = 3, fixed = T, type = "OTP") + ## 3 or 1.5 understanding
+                            dgwesp(decay = 3, fixed = T, type = "ITP") + ## 3 or 1.5 understanding
+                            dgwesp(decay = 3, fixed = T, type = "OSP") + ## 3 or 1.5 consistency
+                            dgwesp(decay = 2, fixed = T, type = "ISP") + ## 3 or 1.5 consistency
+                            
+                            gwodegree(decay = 2, fixed = T) + ## hedonic
+                            gwidegree(decay = 3, fixed = T) + ## hedonic 
+                            
+                            ## interaction terms
+                            edgecov(time_trends) + edgecov(ocov.understanding.X.time) + 
+                            #edgecov(time.X.same.candidate.preference_Park) + 
+                            edgecov(time.X.same.candidate.preference_Moon) + 
+                            #edgecov(ocov.consistency.X.preference.Park) + 
+                            edgecov(ocov.understanding.X.preference.Moon) + 
+                            #edgecov(ocov.consistency.X.time.X.preference.Park) + 
+                            edgecov(ocov.understanding.X.time.X.preference.Moon)
+                          ,
+                          
+                          R = 1000, parallel = "snow", ncpus = 6)
+
+summary(final.model4.r3)
+cbind(coef(final.model4.r3), t(apply(final.model4.r3@boot$t, 2, quantile, c(0.025, 0.975), na.rm = T)))
 
 
 
