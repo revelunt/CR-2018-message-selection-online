@@ -1,6 +1,16 @@
 
 library(pbapply)
 
+#' Source specific lines in an R file
+#'
+#' @param file character string with the path to the file to source.
+#' @param lines numeric vector of lines to source in \code{file}.
+
+source_lines <- function(file, lines){
+  source(textConnection(readLines(file)[lines]))
+}
+
+
 #' compute and compare fitted probabilities from btergm fit objects
 #'
 #' extracting coefficients and creating null hypothesis vector
