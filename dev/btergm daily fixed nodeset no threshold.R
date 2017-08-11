@@ -211,7 +211,7 @@ evaludative.criteria.sim <- 1 / (1 + sqrt(outer(g[[2]] %v% "criteria.competence"
 policy.pref.sim <- 1 / (1 + sqrt(outer(g[[2]] %v% "liberal.issue.stance", g[[2]] %v% "liberal.issue.stance", "-")^2 + 
                                                 outer(g[[2]] %v% "conserv.issue.stance", g[[2]] %v% "conserv.issue.stance", "-")^2))
 
-net <- g[5:27]
+net <- g[2:27]
 
 final.model.daily <- btergm(net ~ edges + ## intercept
                         
@@ -245,7 +245,7 @@ final.model.daily <- btergm(net ~ edges + ## intercept
                         isolates + 
                         mutual + 
                         edgecov("edge.autoregression") + 
-                        #gwdsp(decay = 1, fixed = T) + 
+                        gwdsp(decay = 1, fixed = T) + 
                         
                         ## lagged structural, control
                         edgecov("lagged.reciprocity") + 
@@ -265,10 +265,88 @@ final.model.daily <- btergm(net ~ edges + ## intercept
                         gwodegree(decay = 2, fixed = T) + ## hedonic
                         gwidegree(decay = 3, fixed = T), ## hedonic 
                       
-                      verbose = T, R = 1000, ncpus = 8, parallel = "snow")
+                      verbose = T, R = 1000, ncpus = 6, parallel = "snow")
 
 save(final.model.daily, file = "final.model.daily.Rdata"); summary(final.model.daily)
 
-gof.fit <- gof(final.model.r, statistics = c(dsp, odeg, ideg, desp_OTP, desp_ITP, desp_OSP, desp_ISP,
+# Estimates and 95% confidence intervals:
+#                                        Estimate    2.5%   97.5%
+# edges                                 -1.2380323 -1.8028 -0.6396
+# nodeicov.age                          -0.0223248 -0.0360 -0.0095
+# nodeocov.age                           0.0294965 -0.0022  0.0639
+# nodeifactor.gender.1                  -0.0366996 -0.0623 -0.0008
+# nodeofactor.gender.1                  -0.0433784 -0.1049 -0.0028
+# nodematch.gender                       0.0180177 -0.0025  0.0405
+# nodeicov.edu                          -0.0187091 -0.0382 -0.0003
+# nodeocov.edu                          -0.0233530 -0.0604  0.0038
+# nodeifactor.region_origin2.1          -0.0774311 -0.1068 -0.0584
+# nodeofactor.region_origin2.1           0.0982357  0.0322  0.1556
+# nodematch.region_origin2               0.0148128 -0.0122  0.0417
+# nodeicov.talk.freq                     0.0259718  0.0150  0.0372
+# nodeocov.talk.freq                    -0.0126926 -0.0368  0.0120
+# nodeicov.media.use.freq               -0.0076965 -0.0138  0.0014
+# nodeocov.media.use.freq               -0.0043384 -0.0135  0.0064
+# nodeicov.internal.efficacy            -0.0129056 -0.0205 -0.0046
+# nodeocov.internal.efficacy             0.0489630  0.0269  0.0778
+# nodeifactor.candidate.preference.1    -0.0336298 -0.0533 -0.0044
+# nodeofactor.candidate.preference.1    -0.0146417 -0.0549  0.0354
+# nodeicov.consistency.motivation        0.0173820  0.0023  0.0365
+# nodeocov.consistency.motivation        0.0005258 -0.0311  0.0299
+# nodeicov.understanding.motivation     -0.0267010 -0.0464 -0.0092
+# nodeocov.understanding.motivation      0.0216079 -0.0162  0.0625
+# nodeicov.hedomic.motivation           -0.0059270 -0.0164  0.0042
+# nodeocov.hedomic.motivation           -0.0253844 -0.0483 -0.0061
+# nodematch.candidate.preference         0.0396690  0.0197  0.0571
+# edgecov.policy.pref.sim[[i]]           0.0708359 -0.0116  0.1427
+# edgecov.evaludative.criteria.sim[[i]]  0.0938535  0.0174  0.1760
+# isolates                               1.3107670  1.0507  1.5637
+# mutual                                 0.8480975  0.7593  0.9737
+# edgecov.edge.autoregression            0.2214859  0.1708  0.2729
+# gwdsp.fixed.1                          0.0022051 -0.0010  0.0051
+# edgecov.lagged.reciprocity            -0.0245904 -0.0796  0.0246
+# edgecov.lag.transitivity               0.0306166  0.0199  0.0409
+# edgecov.lag.cyclic                     0.0020324 -0.0041  0.0094
+# edgecov.lag.shared.activity           -0.0278205 -0.0345 -0.0183
+# edgecov.lag.shared.popularity         -0.0091721 -0.0159 -0.0010
+# nodeocov.lagged.sender.effect          0.0165368  0.0142  0.0187
+# nodeicov.lagged.receiver.effect        0.0016719 -0.0001  0.0030
+# gwesp.OTP.fixed.3                      0.0826133  0.0661  0.1011
+# gwesp.ITP.fixed.3                     -0.0598310 -0.0672 -0.0533
+# gwesp.OSP.fixed.3                      0.0166841  0.0082  0.0262
+# gwesp.ISP.fixed.2                      0.0810855  0.0590  0.1071
+# gwodegree                             -2.8814324 -3.2286 -2.5983
+# gwidegree                             -3.7791752 -4.1319 -3.4644
+
+gof.fit <- gof(final.model.daily, statistics = c(dsp, odeg, ideg, desp_OTP, desp_ITP, desp_OSP, desp_ISP,
                                              geodesic, triad.directed, rocpr, walktrap.modularity),
-               nsim = 100, ncpus = 4); plot(gof.fit, mfrow = FALSE)
+               nsim = 100, ncpus = 4, parallel = "snow"); plot(gof.fit, mfrow = FALSE)
+plot(gof.fit)
+
+date <- character(0)
+  for (i in (1:length(ep$t))) {
+    k <- ep$t[i]
+    date[i] <- date.range.labels[k]
+  }
+ep$date <- date
+
+date.range.labels <- substr(date.range.labels, 6, 10)
+date.range.labels <- sub("^11-", "Nov-", date.range.labels)
+date.range.labels <- sub("^12-", "Dec-", date.range.labels)
+
+ggplot(data = ep, aes(x = t, y = probability, colour = factor(nodematch.candidate.preference))) + theme_bw() + 
+  scale_colour_grey(start = 0.8, end = 0.2, guide = guide_legend(reverse=TRUE)) + 
+  #theme(legend.justification=c(1,0), legend.position=c(0.9,0.1), axis.text.x = element_text(face = "bold", angle = 45)) +
+  theme(axis.text.x = element_text(face = "bold")) +
+  scale_x_continuous(breaks = seq(1,26,1), labels = date.range.labels) + 
+  geom_line(stat = "summary", fun.y = mean, size = 1.2) + 
+  # stat_summary(geom = "ribbon", alpha = 0.1, #fill = interaction(factor(nodematch.candidate.preference)),
+  #             fun.ymin = function(z) quantile(z, 0.025),
+  #             fun.ymax = function(z) quantile(z, 0.975)) + 
+  labs(colour = "Candidate preference")
+
+ggplot(data = ep, aes(x = t, y = probability, colour = factor(nodematch.candidate.preference))) + theme_bw() + 
+  scale_colour_grey(start = 0.8, end = 0.2, guide = guide_legend(reverse=TRUE)) + 
+  theme(legend.justification=c(1,0), legend.position=c(0.9,0.1), axis.text.x = element_text(face = "bold", angle = 45)) +
+  scale_x_continuous(breaks = seq(1,26,1), labels = date.range.labels) + 
+  #stat_smooth(method = "auto", fullrange = TRUE) + labs(colour = "Candidate preference")
+  geom_line(stat = "summary", fun.y = "median", size = 1.5)
