@@ -2,6 +2,13 @@
 ## script for paper entitled as 
 ## "Effects of motivation, homophily, and endogenous network process on message exposure within online discussion forum"
 
+list.of.packages <- c("car", "psych","ergm","btergm","texreg","rstudioapi","data.table", "haven")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages, dependencies = T)
+
+## automatically setting working directories
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+
 options(scipen = 999)
 require(ergm)
 require(btergm)
@@ -14,6 +21,109 @@ source("dev/btergm (1) data prep.R")
 
 RNGkind("L'Ecuyer-CMRG")
 set.seed(12345, "L'Ecuyer")
+
+## ----------------- ##
+## Data descriptives ##
+## ----------------- ##
+
+require(psych)
+## motivation variables
+## consistency motivations
+## alpha 
+alpha(dat[vids, .(as.numeric(pv18), as.numeric(pv19), as.numeric(pv20),
+                  as.numeric(pv21), as.numeric(pv23), as.numeric(pv24))])
+## desciptives
+dat[vids, .(rowMeans(.SD)), .SDcols = c("pv18", "pv19", "pv20", "pv21", "pv23", "pv24")][, 
+          .(mean = mean(V1), sd = sd(V1), min = min(V1), max = max(V1))]
+
+## understanding motivations
+alpha(dat[vids, .(as.numeric(pv13), as.numeric(pv14), as.numeric(pv15), as.numeric(pv16))])
+dat[vids, .(rowMeans(.SD)), .SDcols = c("pv13", "pv14", "pv15", "pv16")][,
+  .(mean = mean(V1), sd = sd(V1), min = min(V1), max = max(V1))]
+
+## hedonic motivations
+alpha(dat[vids, .(as.numeric(pv27), as.numeric(pv28), as.numeric(pv29))])
+dat[vids, .(rowMeans(.SD)), .SDcols = c("pv27", "pv28", "pv29")][,
+   .(mean = mean(V1), sd = sd(V1), min = min(V1), max = max(V1))]
+
+
+## preference homophily
+## candidate choice
+dat[vids, .(mean = mean(canpref1), sd = sd(canpref1))]
+dat[vids, .(mean = mean(canpref2), sd = sd(canpref2))]
+dat[vids, .(mean = mean(canpref3), sd = sd(canpref3))]
+
+## ideological policy preference
+## see line 177 to 196, and line 223 to 228 in "dev/btergm (1) data prep.R" for detailed coding
+sapply(policy.pref.sim, function(x) {print(c(mean = mean(x), sd = sd(x)))})
+
+## candidate evaluative criteria
+## see line 203 to 218, and line 223 to 228 in "dev/btergm (1) data prep.R" for detailed coding
+sapply(evaludative.criteria.sim, function(x) {print(c(mean = mean(x), sd = sd(x)))})
+
+
+## control variables
+dat[vids, .(gender = as.numeric(sex) - 1)][, .(mean = mean(gender))] ## 1 = female, 0 = male
+dat[vids, .(age10 = as.numeric(age)/10)][, .(mean = mean(age10), sd = sd(age10))] ## age in ten years
+dat[vids, .(edu = as.numeric(edu))][, .(mean = mean(edu), sd = sd(edu))] ## education level (1 = "less than elemantry" vs. 9 = "more than postgraduate")
+
+## region of origin
+## 1 = Seoul, 2 = Busan, Ulsan & Kungnam, 3 = Tague and Kungbuk
+## 4 = Inchun, kunggi & Kangwon, 
+## 5 = Kwangju & Junnam/buck, 6 = Daejun & Chungnam/buk
+## 7 = Jeuju
+dat[vids, region2 := recode(as.numeric(region1), 
+                                      "1 = 1; 
+                                       2 = 2; 14 = 2; 7 = 2;
+                                       3 = 3; 13 = 3;
+                                       4 = 4; 8 = 4;
+                                       5 = 5; 11:12 = 5; 
+                                       6 = 6; 9:10 = 6;
+                                       15 = 7")][, table(region2)] 
+## region of origin seoul vs all other
+dat[vids, .(recode(as.numeric(region2), "1 = 1; else = 0"))][, mean(V1)] 
+
+## offline talk frequency
+dat[vids, .(as.numeric(pv322))][, .(mean = mean(V1), sd = sd(V1))]
+dat[vids, .(as.numeric(kv217))][, .(mean = mean(V1), sd = sd(V1))]
+dat[vids, .(as.numeric(hv276))][, .(mean = mean(V1), sd = sd(V1))]
+
+## media use freqeuncy
+## remove "NaN" in data
+dat[is.na(pv311), pv311 := 0 ]
+dat[is.na(pv313), pv313 := 0 ]
+dat[is.na(pv317), pv317 := 0 ]
+dat[is.na(kv194), kv194 := 0 ]
+dat[is.na(kv196), kv196 := 0 ]
+dat[is.na(kv200), kv200 := 0 ]
+dat[is.na(hv253), hv253 := 0 ]
+dat[is.na(hv255), hv255 := 0 ]
+dat[is.na(hv259), hv259 := 0 ]
+
+## add with hours, and creaet index
+## W1
+dat[vids, .(internet.news.use = (60*pv310 + pv311)/60,
+            newspaper.use = (60*pv312 + pv313)/60, 
+            tv.news.use = (60*pv316 + pv317)/60)][, 
+    .(media.freq = rowMeans(.SD)), .SDcol = c("internet.news.use", "newspaper.use", "tv.news.use")][,
+    .(mean = mean(media.freq), sd = sd(media.freq))]
+
+# W2
+dat[vids, .(internet.news.use = (60*kv193 + kv194)/60,
+                         newspaper.use = (60*kv195 + kv196)/60, 
+                         tv.news.use = (60*kv199 + kv200)/60)][, 
+    .(media.freq = rowMeans(.SD)), .SDcol = c("internet.news.use", "newspaper.use", "tv.news.use")][,
+    .(mean = mean(media.freq), sd = sd(media.freq))]
+
+# W3
+dat[vids, .(internet.news.use = (60*hv252 + hv253)/60,
+                         newspaper.use = (60*hv254 + hv255)/60, 
+                         tv.news.use = (60*hv258 + hv259)/60)][, 
+    .(media.freq = rowMeans(.SD)), .SDcol = c("internet.news.use", "newspaper.use", "tv.news.use")][,
+    .(mean = mean(media.freq), sd = sd(media.freq))]
+
+## internal discussion efficacy
+dat[vids, pv126:pv129][, rowMeans(.SD), by = vids][,.(mean = mean(V1), sd = sd(V1))]
 
 
 ## --------------------------- ##

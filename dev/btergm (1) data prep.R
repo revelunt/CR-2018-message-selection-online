@@ -119,31 +119,53 @@ g_pre[[3]] <- as.network(g_pre[[3]])
 ## create a set of covariates for each wave ##
 ##------------------------------------------##
 
-## CANDIDATE IMAGE
-# candidate image (Park), W1 to W3
-g[[1]] %v% "candidate.image.Park" <- dat[vids, pv194:pv208][, (Mean = rowMeans(.SD)), by = vids][,V1]
-g[[2]] %v% "candidate.image.Park" <- dat[vids, kv7:kv21][, (Mean = rowMeans(.SD)), by = vids][,V1]
-g[[3]] %v% "candidate.image.Park" <- dat[vids, hv32:hv46][, (Mean = rowMeans(.SD)), by = vids][,V1]
+## motivation for using online forum
+consistency.motivation <- dat[vids, .(as.numeric(pv18),
+                                      as.numeric(pv19),
+                                      as.numeric(pv20),
+                                      as.numeric(pv21),
+                                      as.numeric(pv23),
+                                      as.numeric(pv24))]
 
-# candidate image (Moon), W1 to W3
-g[[1]] %v% "candidate.image.Moon" <- dat[vids, pv209:pv223][, (Mean = rowMeans(.SD)), by = vids][,V1]
-g[[2]] %v% "candidate.image.Moon" <- dat[vids, kv22:kv36][, (Mean = rowMeans(.SD)), by = vids][,V1]
-g[[3]] %v% "candidate.image.Moon" <- dat[vids, hv47:hv61][, (Mean = rowMeans(.SD)), by = vids][,V1]
+g[[1]] %v% "consistency.motivation" <- apply(consistency.motivation, 1, mean)
+g[[2]] %v% "consistency.motivation" <- apply(consistency.motivation, 1, mean)
+g[[3]] %v% "consistency.motivation" <- apply(consistency.motivation, 1, mean)
+
+understanding.motivation <- dat[vids, pv13:pv16]
+g[[1]] %v% "understanding.motivation" <- apply(understanding.motivation, 1, mean)
+g[[2]] %v% "understanding.motivation" <- apply(understanding.motivation, 1, mean)
+g[[3]] %v% "understanding.motivation" <- apply(understanding.motivation, 1, mean)
+
+hedomic.motivation <- dat[vids, pv27:pv29]
+g[[1]] %v% "hedomic.motivation" <- apply(hedomic.motivation, 1, mean)
+g[[2]] %v% "hedomic.motivation" <- apply(hedomic.motivation, 1, mean)
+g[[3]] %v% "hedomic.motivation" <- apply(hedomic.motivation, 1, mean)
+
+## CANDIDATE IMAGE
+# # candidate image (Park), W1 to W3
+# g[[1]] %v% "candidate.image.Park" <- dat[vids, pv194:pv208][, (Mean = rowMeans(.SD)), by = vids][,V1]
+# g[[2]] %v% "candidate.image.Park" <- dat[vids, kv7:kv21][, (Mean = rowMeans(.SD)), by = vids][,V1]
+# g[[3]] %v% "candidate.image.Park" <- dat[vids, hv32:hv46][, (Mean = rowMeans(.SD)), by = vids][,V1]
+# 
+# # candidate image (Moon), W1 to W3
+# g[[1]] %v% "candidate.image.Moon" <- dat[vids, pv209:pv223][, (Mean = rowMeans(.SD)), by = vids][,V1]
+# g[[2]] %v% "candidate.image.Moon" <- dat[vids, kv22:kv36][, (Mean = rowMeans(.SD)), by = vids][,V1]
+# g[[3]] %v% "candidate.image.Moon" <- dat[vids, hv47:hv61][, (Mean = rowMeans(.SD)), by = vids][,V1]
 
 ## CANDIDATE PREFERENCE
 g[[1]] %v% "candidate.preference" <- dat[vids, as.numeric(canpref1)] ## 0 = Park, 1 = Moon
 g[[2]] %v% "candidate.preference" <- dat[vids, as.numeric(canpref2)] ## 0 = Park, 1 = Moon
 g[[3]] %v% "candidate.preference" <- dat[vids, as.numeric(canpref3)] ## 0 = Park, 1 = Moon
 
-## CANDIDATE PREFERENCE IN THERMOMETER_RATING FORM (Moon minus Park)
-g[[1]] %v% "thermo.diff" <- dat[vids, as.numeric(pv255) - as.numeric(pv254)]
-g[[2]] %v% "thermo.diff" <- dat[vids, as.numeric(kv38) - as.numeric(kv37)]
-g[[3]] %v% "thermo.diff" <- dat[vids, as.numeric(hv63) - as.numeric(hv62)]
-
-## preference strengths
-g[[1]] %v% "preference.strength" <- abs(g[[1]] %v% "thermo.diff")
-g[[2]] %v% "preference.strength" <- abs(g[[2]] %v% "thermo.diff")
-g[[3]] %v% "preference.strength" <- abs(g[[3]] %v% "thermo.diff")
+# ## CANDIDATE PREFERENCE IN THERMOMETER_RATING FORM (Moon minus Park)
+# g[[1]] %v% "thermo.diff" <- dat[vids, as.numeric(pv255) - as.numeric(pv254)]
+# g[[2]] %v% "thermo.diff" <- dat[vids, as.numeric(kv38) - as.numeric(kv37)]
+# g[[3]] %v% "thermo.diff" <- dat[vids, as.numeric(hv63) - as.numeric(hv62)]
+# 
+# ## preference strengths
+# g[[1]] %v% "preference.strength" <- abs(g[[1]] %v% "thermo.diff")
+# g[[2]] %v% "preference.strength" <- abs(g[[2]] %v% "thermo.diff")
+# g[[3]] %v% "preference.strength" <- abs(g[[3]] %v% "thermo.diff")
 
 ## issue preference
 ## pv299 / kv39 / hv84: prefer big goverment and regulations
@@ -208,40 +230,39 @@ for (i in 1:3) {
 ## KNOWLEDGE AND INTEREST
 ## knowledge batteries: pv177 pv178 pv179 pv180 pv181 pv182 pv183 pv184 pv185 pv185_1
 # there were no measurement in Wave 2 and Wave 3, so we treat the attributes to be invariant across measurement waves
-g[[1]] %v% "knowledge" <- rowSums(dat[vids, .(KN1 = recode(pv177, "2 = 1; else = 0"),
-                                              KN2 = recode(pv178, "1 = 1; else = 0"),
-                                              KN3 = recode(pv179, "2 = 1; else = 0"),
-                                              KN4 = recode(pv180, "2 = 1; else = 0"),
-                                              KN5 = recode(pv181, "1 = 1; else = 0"),
-                                              KN6 = recode(pv182, "3 = 1; else = 0"),
-                                              KN7 = recode(pv183, "4 = 1; else = 0"),
-                                              KN8 = recode(pv184, "5 = 1; else = 0"), 
-                                              KN9 = recode(pv185, "2 = 1; else = 0"),
-                                              KN0 = recode(pv185_1, "4 = 1; else = 0"))])
-
-g[[3]] %v% "knowledge" <- g[[2]] %v% "knowledge" <- g[[1]] %v% "knowledge"            
+# g[[1]] %v% "knowledge" <- rowSums(dat[vids, .(KN1 = recode(pv177, "2 = 1; else = 0"),
+#                                               KN2 = recode(pv178, "1 = 1; else = 0"),
+#                                               KN3 = recode(pv179, "2 = 1; else = 0"),
+#                                               KN4 = recode(pv180, "2 = 1; else = 0"),
+#                                               KN5 = recode(pv181, "1 = 1; else = 0"),
+#                                               KN6 = recode(pv182, "3 = 1; else = 0"),
+#                                               KN7 = recode(pv183, "4 = 1; else = 0"),
+#                                               KN8 = recode(pv184, "5 = 1; else = 0"), 
+#                                               KN9 = recode(pv185, "2 = 1; else = 0"),
+#                                               KN0 = recode(pv185_1, "4 = 1; else = 0"))])
+# 
+# g[[3]] %v% "knowledge" <- g[[2]] %v% "knowledge" <- g[[1]] %v% "knowledge"            
 
 ## interest baterries: pv165 & pv166
 # there were no measurement in Wave 2 and Wave 3, so we treat the attributes to be invariant across measurement waves
 
-g[[1]] %v% "interest" <- dat[vids, pv165:pv166][, rowMeans(.SD), by = vids][,V1] 
-g[[3]] %v% "interest" <- g[[2]] %v% "interest" <- g[[1]] %v% "interest"    
+# g[[1]] %v% "interest" <- dat[vids, pv165:pv166][, rowMeans(.SD), by = vids][,V1] 
+# g[[3]] %v% "interest" <- g[[2]] %v% "interest" <- g[[1]] %v% "interest"    
+# 
+# 
+# ## combining knowledge and interest to "expertise"
+# g[[1]] %v% "expertise" <- apply(
+#                                 cbind(scale(g[[1]] %v% "knowledge", scale = T),
+#                                       scale(g[[1]] %v% "interest", scale = T)), 
+#                                 1, mean)
+# 
+# g[[3]] %v% "expertise" <- g[[2]] %v% "expertise" <- g[[1]] %v% "expertise"
 
 
-## combining knowledge and interest to "expertise"
-g[[1]] %v% "expertise" <- apply(
-                                cbind(scale(g[[1]] %v% "knowledge", scale = T),
-                                      scale(g[[1]] %v% "interest", scale = T)), 
-                                1, mean)
-
-g[[3]] %v% "expertise" <- g[[2]] %v% "expertise" <- g[[1]] %v% "expertise"
-
-
-
-## external efficacy:
-g[[1]] %v% "external.efficacy" <- dat[vids, .(8 - pv163, 8 - pv164, pv165, pv167)][, rowMeans(.SD), by = vids][,V1]
-g[[2]] %v% "external.efficacy" <- dat[vids, .(8 - kv177, 8 - kv178, kv179, kv181)][, rowMeans(.SD), by = vids][,V1]
-g[[3]] %v% "external.efficacy" <- dat[vids, .(8 - hv232, 8 - hv233, hv238, hv239)][, rowMeans(.SD), by = vids][,V1]
+# ## external efficacy:
+# g[[1]] %v% "external.efficacy" <- dat[vids, .(8 - pv163, 8 - pv164, pv165, pv167)][, rowMeans(.SD), by = vids][,V1]
+# g[[2]] %v% "external.efficacy" <- dat[vids, .(8 - kv177, 8 - kv178, kv179, kv181)][, rowMeans(.SD), by = vids][,V1]
+# g[[3]] %v% "external.efficacy" <- dat[vids, .(8 - hv232, 8 - hv233, hv238, hv239)][, rowMeans(.SD), by = vids][,V1]
 
 ## internal efficacy
 g[[1]] %v% "internal.efficacy" <- dat[vids, pv126:pv129][, rowMeans(.SD), by = vids][,V1]
@@ -289,61 +310,34 @@ g[[1]] %v% "talk.freq" <- dat[vids, as.numeric(pv322)]
 g[[2]] %v% "talk.freq" <- dat[vids, as.numeric(kv217)]
 g[[3]] %v% "talk.freq" <- dat[vids, as.numeric(hv276)]
 
-## political ideology (1 = "extremely liberal" to 7 = "extremely conservative")
-g[[1]] %v% "pol.ideology" <- dat[vids, as.numeric(pv258)]
-g[[2]] %v% "pol.ideology" <- dat[vids, as.numeric(kv49)]
-g[[3]] %v% "pol.ideology" <- dat[vids, as.numeric(hv104)]
+# ## political ideology (1 = "extremely liberal" to 7 = "extremely conservative")
+# g[[1]] %v% "pol.ideology" <- dat[vids, as.numeric(pv258)]
+# g[[2]] %v% "pol.ideology" <- dat[vids, as.numeric(kv49)]
+# g[[3]] %v% "pol.ideology" <- dat[vids, as.numeric(hv104)]
+# 
+# ## opinionated personality
+# g[[1]] %v% "opinionated" <- dat[vids, as.numeric(pv45)]
+# g[[2]] %v% "opinionated" <- dat[vids, as.numeric(kv82)]
+# g[[3]] %v% "opinionated" <- dat[vids, as.numeric(hv137)]
+# 
+# ## submissive personality
+# g[[1]] %v% "submissive" <- dat[vids, as.numeric(pv47)]
+# g[[2]] %v% "submissive" <- dat[vids, as.numeric(kv84)]
+# g[[3]] %v% "submissive" <- dat[vids, as.numeric(hv139)]
+# 
 
-## opinionated personality
-g[[1]] %v% "opinionated" <- dat[vids, as.numeric(pv45)]
-g[[2]] %v% "opinionated" <- dat[vids, as.numeric(kv82)]
-g[[3]] %v% "opinionated" <- dat[vids, as.numeric(hv137)]
-
-## submissive personality
-g[[1]] %v% "submissive" <- dat[vids, as.numeric(pv47)]
-g[[2]] %v% "submissive" <- dat[vids, as.numeric(kv84)]
-g[[3]] %v% "submissive" <- dat[vids, as.numeric(hv139)]
-
-## motivation for using online forum
-consistency.motivation <- dat[vids, .(as.numeric(pv18),
-                                      as.numeric(pv19),
-                                      as.numeric(pv20),
-                                      as.numeric(pv21),
-                                      as.numeric(pv23),
-                                      as.numeric(pv24))]
-
-g[[1]] %v% "consistency.motivation" <- apply(consistency.motivation, 1, mean)
-g[[2]] %v% "consistency.motivation" <- apply(consistency.motivation, 1, mean)
-g[[3]] %v% "consistency.motivation" <- apply(consistency.motivation, 1, mean)
-
-understanding.motivation <- dat[vids, pv13:pv16]
-g[[1]] %v% "understanding.motivation" <- apply(understanding.motivation, 1, mean)
-g[[2]] %v% "understanding.motivation" <- apply(understanding.motivation, 1, mean)
-g[[3]] %v% "understanding.motivation" <- apply(understanding.motivation, 1, mean)
-
-hedomic.motivation <- dat[vids, pv27:pv29]
-g[[1]] %v% "hedomic.motivation" <- apply(hedomic.motivation, 1, mean)
-g[[2]] %v% "hedomic.motivation" <- apply(hedomic.motivation, 1, mean)
-g[[3]] %v% "hedomic.motivation" <- apply(hedomic.motivation, 1, mean)
-
-social.motivation <- dat[vids, pv30:pv32]
-g[[1]] %v% "social.motivation" <- apply(hedomic.motivation, 1, mean)
-g[[2]] %v% "social.motivation" <- apply(hedomic.motivation, 1, mean)
-g[[3]] %v% "social.motivation" <- apply(hedomic.motivation, 1, mean)
-
-
-## message quality 
-g[[1]] %v% "message.quality" <- dat[vids, .(quality = rowMeans(as.matrix(.SD), na.rm = T)), 
-                                   .SDcols = c("툴민_주장_mean", "툴민_근거_mean",
-                                               "툴민_보장_mean", "툴민_보강_mean")][, 
-                                   recode(quality, "NA = 0; NaN = 0")]
-g[[3]] %v% "message.quality" <- g[[2]] %v% "message.quality" <- g[[1]] %v% "message.quality"
-
-## message cues 
-g[[1]] %v% "message.cue" <- dat[vids, .(quality = rowMeans(as.matrix(.SD), na.rm = T)), 
-                                    .SDcols = c("추천_mean", "댓글_mean", "반대_mean")][, 
-                                    recode(quality, "NA = 0; NaN = 0")]
-g[[3]] %v% "message.cue" <- g[[2]] %v% "message.cue" <- g[[1]] %v% "message.cue"
+# ## message quality 
+# g[[1]] %v% "message.quality" <- dat[vids, .(quality = rowMeans(as.matrix(.SD), na.rm = T)), 
+#                                    .SDcols = c("툴민_주장_mean", "툴민_근거_mean",
+#                                                "툴민_보장_mean", "툴민_보강_mean")][, 
+#                                    recode(quality, "NA = 0; NaN = 0")]
+# g[[3]] %v% "message.quality" <- g[[2]] %v% "message.quality" <- g[[1]] %v% "message.quality"
+# 
+# ## message cues 
+# g[[1]] %v% "message.cue" <- dat[vids, .(quality = rowMeans(as.matrix(.SD), na.rm = T)), 
+#                                     .SDcols = c("추천_mean", "댓글_mean", "반대_mean")][, 
+#                                     recode(quality, "NA = 0; NaN = 0")]
+# g[[3]] %v% "message.cue" <- g[[2]] %v% "message.cue" <- g[[1]] %v% "message.cue"
 
 ## demographics (time-invariant) covariates
 
@@ -423,32 +417,32 @@ for (i in 1:3) {
   g_lag_shared_popularity[[i]] <- temp
 }
 
-asymmetrical.expertise <- lapply(g, make_asymmetrical_adj, "expertise")
-asymmetrical.interest <- lapply(g, make_asymmetrical_adj, "interest")
+# asymmetrical.expertise <- lapply(g, make_asymmetrical_adj, "expertise")
+# asymmetrical.interest <- lapply(g, make_asymmetrical_adj, "interest")
+# 
+# alter_more_expertise <- lapply(asymmetrical.expertise, function(x) {
+#   mat <- 1 * (x > 0)
+#   diag(mat) <- 0
+#   mat
+# }
+# )
+# 
+# alter_more_interested <- lapply(asymmetrical.interest, function(x) {
+#   mat <- 1 * (x > 0)
+#   diag(mat) <- 0
+#   mat
+# })
 
-alter_more_expertise <- lapply(asymmetrical.expertise, function(x) {
-  mat <- 1 * (x > 0)
-  diag(mat) <- 0
-  mat
-}
-)
 
-alter_more_interested <- lapply(asymmetrical.interest, function(x) {
-  mat <- 1 * (x > 0)
-  diag(mat) <- 0
-  mat
-})
-
-
-## source and sink nodes
-for (i in 1:3) {
-out <- data.table(indegree = degree(g[[i]], gmode = "digraph", cmode = "indegree"), 
-                  outdegree = degree(g[[i]], gmode = "digraph", cmode = "outdegree"))
-out[, sink := .(indegree > 0 & outdegree == 0)]
-out[, source := .(indegree == 0 & outdegree > 0)]
-g[[i]] %v% "sink" <- out[, sink]
-g[[i]] %v% "source" <- out[, source]
-}
+# ## source and sink nodes
+# for (i in 1:3) {
+# out <- data.table(indegree = degree(g[[i]], gmode = "digraph", cmode = "indegree"), 
+#                   outdegree = degree(g[[i]], gmode = "digraph", cmode = "outdegree"))
+# out[, sink := .(indegree > 0 & outdegree == 0)]
+# out[, source := .(indegree == 0 & outdegree > 0)]
+# g[[i]] %v% "sink" <- out[, sink]
+# g[[i]] %v% "source" <- out[, source]
+# }
 
 # ## factor analysis for homophily variable groups
 # dat.factor <- data.table(pol.ideo.W1 = dat[vids, as.numeric(pv258)], 
@@ -484,8 +478,8 @@ g[[i]] %v% "source" <- out[, source]
 ## the pattern suggests that ideology and candidate preference would load on a single dimension,
 ## so we only look at the candidate preference homophily. Policy stance is loaded on a seperate dimension.
 
-rm(dat, dat2, consistency.motivation, hedomic.motivation, social.motivation,
+rm(dat2, consistency.motivation, hedomic.motivation, social.motivation,
    net, net2, temp, temp.test, evaludative.criteria.diff, policy.pref.diff,
-   understanding.motivation, criteria.background, criteria.competence, g_pre, i, lengthn, vids)
+   understanding.motivation, criteria.background, criteria.competence, g_pre, i, lengthn)
 
  
