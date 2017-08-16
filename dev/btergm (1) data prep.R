@@ -35,6 +35,7 @@ vids <- dat2$r_id
 
 g <- list()
 g_pre <- list()
+offsmat <- list() 
 
 net <- read.csv("Dat/Reading_1113-1126_Participants(N=341)_Count(N=160836).csv")
 net2 <- read.csv("Dat/Reading_1127-1219_Participants(N=341)_Count(N=160836).csv")
@@ -48,21 +49,41 @@ g[[1]] <- net[reading.date %between% c("2012-11-27", "2012-11-29"),]
 g[[1]] <- data.frame(g[[1]][,2], g[[1]][,3]) ## reader: source, poster: target
 setDT(g[[1]]); g[[1]][, count :=1]
 g[[1]][, sum(count), by = c("poster.id", "reader.id")][poster.id %in% vids & reader.id %in% vids, mean(V1)] 
+
+nodelist1 <- unique(sort(c(g[[1]]$reader.id, g[[1]]$poster.id)))
+
 g[[1]] <- graph.data.frame(g[[1]], directed = TRUE, vertices = 1:341)
 g[[1]] <- induced_subgraph(g[[1]], vids = vids)
 g[[1]] <- as.matrix(as_adj(g[[1]]))
 g[[1]] <- sna::event2dichot(g[[1]], method = "absolute", thresh = 2.508298)
 g[[1]] <- as.network(g[[1]])
 
+offsmat[[1]] <- matrix(0, ncol = 312, nrow = 312)
+rownames(offsmat[[1]]) <- colnames(offsmat[[1]]) <- network.vertex.names(g[[1]])
+off1 <- network.vertex.names(g[[1]])[!(network.vertex.names(g[[1]]) %in% nodelist1)]
+
+offsmat[[1]][off1, ] <- 1
+offsmat[[1]][, off1] <- 1
+
 ## Wave 2 network from 12/11 to 12/13 (survey administered at Dec 11th to 13th?)
 g[[2]] <- net[reading.date %between% c("2012-12-11", "2012-12-13"),]
 g[[2]] <- data.frame(g[[2]][,2], g[[2]][,3]) ## reader: source, poster: target
 setDT(g[[2]]); g[[2]][, count :=1]
+
+nodelist2 <- unique(sort(c(g[[2]]$reader.id, g[[2]]$poster.id)))
+
 g[[2]][, sum(count), by = c("poster.id", "reader.id")][poster.id %in% vids & reader.id %in% vids, mean(V1)] 
 g[[2]] <- induced_subgraph(graph.data.frame(g[[2]], directed = TRUE, vertices = 1:341), vids = vids)
 g[[2]] <- as.matrix(as_adj(g[[2]]))
 g[[2]] <- sna::event2dichot(g[[2]], method = "absolute", thresh = 2.909601)
 g[[2]] <- as.network(g[[2]])
+
+offsmat[[2]] <- matrix(0, ncol = 312, nrow = 312)
+rownames(offsmat[[2]]) <- colnames(offsmat[[2]]) <- network.vertex.names(g[[2]])
+off2 <- network.vertex.names(g[[2]])[!(network.vertex.names(g[[2]]) %in% nodelist2)]
+
+offsmat[[2]][off2, ] <- 1
+offsmat[[2]][, off2] <- 1
 
 
 ## Wave 3 network from 12/17 to 12/19 (*** survey administered at Dec 21th to 23th)
@@ -70,10 +91,20 @@ g[[3]] <- net[reading.date %between% c("2012-12-17", "2012-12-19"),]
 g[[3]] <- data.frame(g[[3]][,2], g[[3]][,3]) ## reader: source, poster: target
 setDT(g[[3]]); g[[3]][, count :=1]
 g[[3]][, sum(count), by = c("poster.id", "reader.id")][poster.id %in% vids & reader.id %in% vids, mean(V1)] 
+
+nodelist3 <- unique(sort(c(g[[3]]$reader.id, g[[3]]$poster.id)))
+
 g[[3]] <- induced_subgraph(graph.data.frame(g[[3]], directed = TRUE, vertices = 1:341), vids = vids)
 g[[3]] <- as.matrix(as_adj(g[[3]]))
 g[[3]] <- sna::event2dichot(g[[3]], method = "absolute", thresh = 3.233531)
 g[[3]] <- as.network(g[[3]])
+
+offsmat[[3]] <- matrix(0, ncol = 312, nrow = 312)
+rownames(offsmat[[3]]) <- colnames(offsmat[[3]]) <- network.vertex.names(g[[3]])
+off3 <- network.vertex.names(g[[3]])[!(network.vertex.names(g[[3]]) %in% nodelist3)]
+
+offsmat[[3]][off3, ] <- 1
+offsmat[[3]][, off3] <- 1
 
 
 ## previous communication patterns
@@ -363,13 +394,18 @@ for (i in 1:3) {
 }
 
 ## lagged sender and receiver effect
-g[[1]] %v% "lagged.sender.effect" <- rowSums(as.matrix(g_pre[[1]]))
-g[[2]] %v% "lagged.sender.effect" <- rowSums(as.matrix(g_pre[[2]]))
-g[[3]] %v% "lagged.sender.effect" <- rowSums(as.matrix(g_pre[[3]]))
+for (i in 1:3) {
+  g[[i]] %v% "lagged.sender.effect" <- log1p(rowSums(as.matrix(g_pre[[i]])))
+  g[[i]] %v% "lagged.receiver.effect" <- log1p(colSums(as.matrix(g_pre[[i]])))
+#   temp1 <- ergmMPLE(g_pre[[i]] ~ gwodegree(decay = 2, fixed = T), output = "array")$predictor[,,1]
+#   diag(temp1) <- 0
+# g[[i]] %n% "lagged.sender.effect" <- temp1
+# 
+#   temp2 <- ergmMPLE(g_pre[[i]] ~ gwidegree(decay = 3, fixed = T), output = "array")$predictor[,,1]
+#   diag(temp2) <- 0
+# g[[i]] %n% "lagged.receiver.effect" <- temp2
+ }
 
-g[[1]] %v% "lagged.receiver.effect" <- colSums(as.matrix(g_pre[[1]]))
-g[[2]] %v% "lagged.receiver.effect" <- colSums(as.matrix(g_pre[[2]]))
-g[[3]] %v% "lagged.receiver.effect" <- colSums(as.matrix(g_pre[[3]]))
 
 
 ## lagged reciprocity and autoregression
@@ -478,7 +514,7 @@ for (i in 1:3) {
 ## the pattern suggests that ideology and candidate preference would load on a single dimension,
 ## so we only look at the candidate preference homophily. Policy stance is loaded on a seperate dimension.
 
-rm(dat2, consistency.motivation, hedomic.motivation, social.motivation,
+rm(dat2, consistency.motivation, hedomic.motivation,
    net, net2, temp, temp.test, evaludative.criteria.diff, policy.pref.diff,
    understanding.motivation, criteria.background, criteria.competence, g_pre, i, lengthn)
 
