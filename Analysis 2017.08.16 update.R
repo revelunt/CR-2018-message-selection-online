@@ -260,7 +260,7 @@ final.model <- btergm(g ~ edges + ## intercept
                    gwodegree(decay = 2, fixed = T) + 
                    gwidegree(decay = 3, fixed = T), ## hedonic 
                  
-                   offset = T, verbose = T, R = R, ncpus = ncpus, parallel = parallel); summary(final.model)
+                   verbose = T, R = R, ncpus = ncpus, parallel = parallel); summary(final.model)
 
 summary.final <- summary(final.model, type = "bca")
 
@@ -960,3 +960,86 @@ p.inter.jn <- ggplot(data = dta, aes(x = time, y = theta)) + geom_line(color = "
 require(gridExtra)
 grid.arrange(p.inter.mn, p.inter.jn, nrow = 1, ncol = 2)
 
+
+
+## does the effect of evaluative criteria amplifies for candidate preference?
+
+same_candidate_preference  <- lapply(1:3, function(i) {
+  temp1.t <- ergmMPLE(g[[i]] ~ nodematch("candidate.preference"), output = "array")$predictor[,,1]
+  dimnames(temp1.t) <- NULL
+  diag(temp1.t) <- 0
+  temp1.t})
+
+
+criteria.X.preference <- lapply(1:3, function(i) {
+  temp <- evaludative.criteria.sim[[i]] * same_candidate_preference[[i]]
+  diag(temp) <- 0
+  temp
+})
+
+
+final.model7 <- btergm(g ~ edges + ## intercept
+                          
+                          ## demographic controls
+                          nodeicov("age") + nodeocov("age") + 
+                          nodeifactor("gender") + nodeofactor("gender") + nodematch("gender") + 
+                          nodeicov("edu") + nodeocov("edu") + 
+                          nodeifactor("region_origin2") + 
+                          nodeofactor("region_origin2") + 
+                          nodematch("region_origin2") +   
+                          
+                          ## political discussion-related controls
+                          nodeicov("talk.freq") + nodeocov("talk.freq") + 
+                          nodeicov("media.use.freq") + nodeocov("media.use.freq") + 
+                          nodeicov("internal.efficacy") + nodeocov("internal.efficacy") +
+                          nodeifactor("candidate.preference") + nodeofactor("candidate.preference") + 
+                          
+                          ## individual, motivation factor
+                          nodeicov("consistency.motivation") + nodeocov("consistency.motivation") + 
+                          nodeicov("understanding.motivation") + nodeocov("understanding.motivation") + 
+                          nodeicov("hedomic.motivation") + nodeocov("hedomic.motivation") + 
+                          
+                          ## dyadic, consistency
+                          nodematch("candidate.preference") + 
+                          edgecov(policy.pref.sim) +
+                          
+                          ## dyadic, understanding
+                          edgecov(evaludative.criteria.sim) +
+                          edgecov(criteria.X.preference) + 
+                          
+                          ## endogenous and lagged structural, control
+                          isolates + mutual + 
+                          edgecov(g_autoregression) + 
+                          gwdsp(decay = 1, fixed = T) + 
+                          
+                          ## lagged structural, control
+                          edgecov(g_delrecip) + 
+                          edgecov(g_lagtransitivity) + ## lagged gwesp_OTP
+                          edgecov(g_lagcyclic) + ## lagged gwesp_ITP
+                          edgecov(g_lag_shared_activity) + ## lagged gwesp_OSP
+                          edgecov(g_lag_shared_popularity) + ## lagged gwesp_ISP
+                          nodeocov("lagged.sender.effect") + 
+                          nodeicov("lagged.receiver.effect") + 
+                          
+                          ## endogenous structural
+                          dgwesp(decay = 3, fixed = T, type = "OTP") + 
+                          dgwesp(decay = 3, fixed = T, type = "ITP") + 
+                          dgwesp(decay = 3, fixed = T, type = "OSP") + 
+                          dgwesp(decay = 2, fixed = T, type = "ISP") + 
+                          
+                          gwodegree(decay = 2, fixed = T) + 
+                          gwidegree(decay = 3, fixed = T), 
+                       
+                          verbose = T, R = 1000, parallel = "snow", ncpus = parallel::detectCores())
+
+summary(final.model7, type = "bca")
+
+ep <- edgeprob(final.model7)
+setDT(ep)
+
+ggplot(ep, aes(x = edgecov.evaludative.criteria.sim, y = probability, colour = factor(nodematch.candidate.preference))) + 
+  geom_smooth(method = "glm", fullrange = T) + theme_bw() + 
+  labs(colour = "Same candidate preference") + 
+  scale_colour_grey(start = 0.8, end = 0.2, guide = guide_legend(reverse=TRUE)) + 
+  theme(legend.justification=c(1,0), legend.position=c(0.9,0.1)) + 
+  xlab("Similarity in candidate evaluative criteria") + ylab("Probability") 

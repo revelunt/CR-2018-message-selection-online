@@ -26,53 +26,61 @@ for (i in 1:3) {
  g[[i]] %n% "lag_shared_popularity" <- g_lag_shared_popularity[[i]]
 }
 
-stergm.model <- stergm(nw = g, formation =  ~ edges + nodeicov("age") + nodeocov("age") + 
-                                                 nodeifactor("gender") + nodeofactor("gender") + 
-                                                 nodematch("gender") + 
-                                                 nodeicov("edu") + nodeocov("edu") + 
-                                                 #nodeifactor("region_origin2") + nodeofactor("region_origin2") + 
-                                                 nodematch("region_origin2") + 
-                                                 nodeicov("talk.freq") + nodeocov("talk.freq") + 
-                                                 nodeicov("media.use.freq") + nodeocov("media.use.freq") + 
-                                                 nodecov("internal.efficacy") +  
-                                                 edgecov("autoregression") + 
-                                                 edgecov("delrecip") + 
-                                                 edgecov("lagtransitivity") + 
-                                                 edgecov("lagcyclic") + 
-                                                 edgecov("lag_shared_activity") +
-                                                 edgecov("lag_shared_popularity") +
-                                                 nodeocov("lagged.sender.effect") + 
-                                                 nodeicov("lagged.receiver.effect") + 
-                                                    isolates + 
-                                                    mutual + 
-                                                    dgwesp(decay = 3.2, fixed = T, type = "OTP") + 
-                                                    dgwesp(decay = 3.2, fixed = T, type = "ITP") + 
-                                                    dgwesp(decay = 3.2, fixed = T, type = "OSP") + 
-                                                    dgwesp(decay = 2, fixed = T, type = "ISP") + 
-                                                    gwdsp(decay = 1, fixed = T) + 
-                                                    gwodegree(decay = 2, fixed = T) + 
-                                                    gwidegree(decay = 3, fixed = T) + 
-                                                    
-                                                    nodeicov("consistency.motivation") + nodeocov("consistency.motivation") + 
-                                                    nodeicov("understanding.motivation") + nodeocov("understanding.motivation") + 
-                                                    nodeicov("hedomic.motivation") + nodeocov("hedomic.motivation") + 
-                                                    nodeicov("candidate.preference") + nodeocov("candidate.preference") + 
-                                                    nodematch("candidate.preference") + 
-                                                    edgecov("policy.pref.sim") + 
-                                                    edgecov("evaludative.criteria.sim")
-                                                    ,
-                       dissolution = ~ edges + 
+stergm.model <- stergm(nw = g, formation =  ~ edges + 
+                         nodeicov("age") + nodeocov("age") + 
+                         nodeifactor("gender") + nodeofactor("gender") + nodematch("gender") + 
+                         nodeicov("edu") + nodeocov("edu") + 
+                         #nodeifactor("region_origin2") + 
+                         #nodeofactor("region_origin2") + 
+                         nodematch("region_origin2") +   
                          
+                         ## political discussion-related controls
+                         nodeicov("talk.freq") + nodeocov("talk.freq") + 
+                         nodeicov("media.use.freq") + nodeocov("media.use.freq") + 
+                         nodeicov("internal.efficacy") + nodeocov("internal.efficacy") +
+                         nodeifactor("candidate.preference") + nodeofactor("candidate.preference") + 
+                         
+                         ## individual, motivation factor
                          nodeicov("consistency.motivation") + nodeocov("consistency.motivation") + 
                          nodeicov("understanding.motivation") + nodeocov("understanding.motivation") + 
                          nodeicov("hedomic.motivation") + nodeocov("hedomic.motivation") + 
+                         
+                         ## dyadic, consistency
                          nodematch("candidate.preference") + 
-                         edgecov("policy.pref.sim") + 
-                         edgecov("evaludative.criteria.sim"),
-                       estimate = "CMLE", times = 1:3, 
-                       control = control.stergm(
+                         edgecov("policy.pref.sim") +
+                         
+                         ## dyadic, understanding
+                         edgecov("evaludative.criteria.sim") +
+                         ## endogenous and lagged structural, control
+                         isolates + mutual + 
+                         edgecov("autoregression") + 
+                         gwdsp(decay = 1, fixed = T) + 
+                         
+                         ## lagged structural, control
+                         edgecov("delrecip") + 
+                         edgecov("lagtransitivity") + ## lagged gwesp_OTP
+                         edgecov("lagcyclic") + ## lagged gwesp_ITP
+                         edgecov("lag_shared_activity") + ## lagged gwesp_OSP
+                         edgecov("lag_shared_popularity") + ## lagged gwesp_ISP
+                         nodeocov("lagged.sender.effect") + 
+                         nodeicov("lagged.receiver.effect") + 
+                         
+                         ## endogenous structural
+                         dgwesp(decay = 3.2, fixed = T, type = "OTP") + ## 3 or 1.5 understanding
+                         dgwesp(decay = 3.2, fixed = T, type = "ITP") + ## 3 or 1.5 understanding
+                         dgwesp(decay = 3.2, fixed = T, type = "OSP") + ## 3 or 1.5 consistency
+                         dgwesp(decay = 2, fixed = T, type = "ISP") + ## 3 or 1.5 consistency
+                         
+                         gwodegree(decay = 2, fixed = T) + ## hedonic
+                         gwidegree(decay = 3, fixed = T),
+                       
+                       dissolution = ~ edges, ## assumes homogenous dissolution, 
+                       estimate = "CMLE",
+                       times = 1:3, 
+                       control = control.stergm(#init.form = coef(stergm.model)$formation,
+                                                CMLE.control.form = control.ergm(MCMLE.maxit = 50),
                                                 CMLE.MCMC.burnin=1000000,
                                                 CMLE.MCMC.interval=50000, 
                                                 #MCMC.samplesize=50000,
-                                                parallel = 8, parallel.type = "PSOCK", seed = 234765, 
-                                                init.form = coef(stergm.model$formation)))
+                                                parallel = 10, parallel.type = "PSOCK", seed = 12345
+                                                ))
