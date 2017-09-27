@@ -137,7 +137,7 @@ gof.statistics <- c(dsp, odeg, ideg, desp_OTP, desp_ITP, desp_OSP, desp_ISP,
                     geodesic, triad.directed, rocpr, walktrap.modularity)
 R <- 1000
 parallel <- "snow"
-ncpus <- 10
+ncpus <- parallel::detectCores()
 gof_ncpus <- 4
 
 
