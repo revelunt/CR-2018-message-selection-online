@@ -44,7 +44,7 @@ net <- rbind(net, net2)
 setDT(net)
 net[, reading.date := as.Date(reading.time, format = "%Y-%m-%d %H:%M:%S")]
 
-## Wave 1 network from 11/27 to 12/04 (survey administered at Nov 27 to 29)
+## Wave 1 network from 11/27 to 11/29 (survey administered at Nov 27 to 29)
 g[[1]] <- net[reading.date %between% c("2012-11-27", "2012-11-29"),]
 g[[1]] <- data.frame(g[[1]][,2], g[[1]][,3]) ## reader: source, poster: target
 setDT(g[[1]]); g[[1]][, count :=1]

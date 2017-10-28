@@ -48,7 +48,14 @@ dat[vids, .(rowMeans(.SD)), .SDcols = c("pv27", "pv28", "pv29")][,
 
 
 ## preference homophily
-## candidate choice
+sapply(g, function(x) {
+  temp <- ergmMPLE(x ~ nodematch("candidate.preference"), output = "array")$predictor[,,1]
+  dimnames(temp) <- NULL
+  diag(temp) <- 0
+  print(c(mean = mean(temp), sd = sd(temp)))
+})
+
+## cf. candidate choice
 dat[vids, .(mean = mean(canpref1), sd = sd(canpref1))]
 dat[vids, .(mean = mean(canpref2), sd = sd(canpref2))]
 dat[vids, .(mean = mean(canpref3), sd = sd(canpref3))]

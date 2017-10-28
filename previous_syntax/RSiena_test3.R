@@ -57,7 +57,7 @@ g1[, sum(count), by = c("poster.id", "reader.id")][, mean(V1)] ## 2.487684
 g1 <- graph.data.frame(g1, directed = TRUE, vertices = 1:341)
 g1 <- induced_subgraph(g1, vids = vids)
 g1 <- as.matrix(as_adj(g1))
-g[,,1] <- sna::event2dichot(g1, method = "absolute", thresh = 2.487684)
+g[,,1] <- sna::event2dichot(g1, method = "absolute", thresh = 0.5)
 
 
 ## Wave 2 network from 12/11 to 12/13 (survey administered at Dec 11th to 13th?)
@@ -67,7 +67,7 @@ setDT(g2); g2[, count :=1]
 g2[, sum(count), by = c("poster.id", "reader.id")][, mean(V1)] ## 2.901684
 g2 <- induced_subgraph(graph.data.frame(g2, directed = TRUE, vertices = 1:341), vids = vids)
 g2 <- as.matrix(as_adj(g2))
-g[,,2] <- sna::event2dichot(g2, method = "absolute", thresh = 2.901684)
+g[,,2] <- sna::event2dichot(g2, method = "absolute", thresh = 0.5)
 
 
 ## Wave 3 network from 12/17 to 12/19 (survey administered at Dec 21th to 23th)
@@ -77,7 +77,7 @@ setDT(g3); g3[, count :=1]
 g3[, sum(count), by = c("poster.id", "reader.id")][, mean(V1)] ## 3.290696
 g3 <- induced_subgraph(graph.data.frame(g3, directed = TRUE, vertices = 1:341), vids = vids)
 g3 <- as.matrix(as_adj(g3))
-g[,,3] <- sna::event2dichot(g3, method = "absolute", thresh = 3.290696)
+g[,,3] <- sna::event2dichot(g3, method = "absolute", thresh = 0.5)
 
 ## graphs in one place
 require(sna)
@@ -273,7 +273,7 @@ hedomic.motivation <- coCovar(apply(dat[vids, pv27:pv29], 1, mean))
   candidate.preference <- sienaDependent(as.matrix(candidate.preference), type="behavior")
   cand.pref.thermo <- sienaDependent(as.matrix(cand.pref.thermo), type="behavior")
   
-  mydata <- RSiena::sienaDataCreate(discussion.net, candidate.preference,
+  mydata <- RSiena::sienaDataCreate(discussion.net, candidate.preference, evaludative.criteria.diff,
                             age, gender, edu,
                             liberal.issue.stance, conserv.issue.stance, 
                             knowledge, interest, media.use.freq, 
@@ -298,6 +298,7 @@ effectsDocumentation(myeff) # See Manual section 12 for a detailed information
 ## Define the algorithm settings:
 myalgorithm <- sienaAlgorithmCreate(useStdInits = F, projname = "test.july05-Mac.txt", 
                                     diagonalize = 0.2, doubleAveraging = 0,
+                                    nsub = 5, n2start = 1000,
                                     seed = 43256423)
 
 # add baseline control effects for network evolution: age, gender, edu status, and pol.ideology
@@ -309,7 +310,7 @@ myeff <- includeEffects(myeff, RateX, interaction1 = "understanding.motivation",
 # myeff <- includeEffects(myeff, diffX, interaction1 = "pol.ideology") ## simialr ideology (less difference)
 
 # add some more effects
-myeff <- includeEffects(myeff, gwespBB, gwespFB, gwespBF, inPop, outAct)
+myeff <- includeEffects(myeff, gwespBB, gwespFF, inPop, outAct)
 # myeff <- includeEffects(myeff, nbrDist2, inStructEq) # no. of actors at distance 2: inverse of network closure  # Control for Structural equivalence with respect to indegree 
 # myeff <- includeEffects(myeff, cycle3, fix = T, test = T, include = T)
 
@@ -326,6 +327,9 @@ myeff <- includeEffects(myeff, egoX, altX, sameX,
 ## influence on candidate preference from network
 myeff <- includeEffects(myeff, name = "candidate.preference",
                         totAlt, interaction1 = "discussion.net")
+myeff <- includeEffects(myeff, name = "candidate.preference",
+                        totAltW, interaction1 = "discussion.net", interaction2 = "evaludative.criteria.diff")
+
 
 # myeff <- includeEffects(myeff, name = "candidate.preference",
 #                         effFrom, interaction1 = "liberal.issue.stance" )
@@ -349,7 +353,7 @@ myeff <- includeEffects(myeff, X, interaction1 = "policy.pref.diff")
 
 ## The function siena07 fits the specified model to the data
 Model1 <- RSiena::siena07(myalgorithm, data = mydata, effects = myeff, useCluster = T, 
-                  nbrNodes = 12, batch = F, clusterType = "FORK", returnDeps = T) 	
+                  nbrNodes = 10, batch = F, clusterType = "FORK", returnDeps = T) 	
 
 ## first, we should create some functions to caculate network statistics:
 TriadCensus <- function(i, data, sims, wave, groupName, varName, levls=1:16){

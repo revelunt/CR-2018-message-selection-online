@@ -230,11 +230,11 @@ effectsDocumentation(myeff) # See Manual section 12 for a detailed information
 
 
 ## Define the algorithm settings:
-myalgorithm <- sienaAlgorithmCreate(useStdInits = F, projname = "test.txt", 
+myalgorithm <- sienaAlgorithmCreate(useStdInits = T, projname = "test.txt", 
                                     diagonalize = 0.2, doubleAveraging = 0,
                                     seed = 43256423)
 
-myeff <- includeEffects(myeff, gwespBB, gwespFB, gwespBF, inPop, outAct)
+myeff <- includeEffects(myeff, gwespBB, gwespFF, gwespFB, gwespBF, inPop, outAct)
 myeff <- includeEffects(myeff, egoX, altX, simX,
                         interaction1 = "cand.pref.thermo")
 myeff <- includeEffects(myeff, name = "cand.pref.thermo",
