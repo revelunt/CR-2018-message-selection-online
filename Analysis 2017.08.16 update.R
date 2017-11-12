@@ -580,7 +580,8 @@ ggplot(mean.pb, aes(x = as.factor(indegree), y = mean.pb, fill = time)) +
   geom_errorbar(aes(ymin = mean.pb - se, ymax = mean.pb + se),
                 width = .1, position = position_dodge(.9)) + 
   xlab("Indegree") + ylab("P(at least one additional tie)") +
-  theme_bw() + scale_fill_manual(values = c("grey80", "grey", "grey40")) 
+  theme_bw() + scale_fill_manual(values = c("grey80", "grey", "grey40")) #+
+  #geom_text(aes(label=mean.pb), position = position_dodge(width=0.9), vjust=-0.25)
 
 
 ## ---------------------------- ##
@@ -934,7 +935,7 @@ p.inter.mn <- ggplot(data = ep, aes(x = X2, y = predprob, colour = factor(X1))) 
   theme(legend.justification=c(1,0), legend.position=c(0.9,0.1)) +
   geom_line(stat = "identity", size = 1.5) + labs(colour = "Candidate preference") + 
   xlab("Time trends") + ylab("Predicted edge probability") + 
-  ggtitle("Panel A: Main effect of candidate preference homophily")
+  ggtitle("Panel A: Main effect, candidate preference homophily")
 
 ## how many unique change statistics in modertor?
 v2 <- sort(unlist(unique(ep['edgecov.timecov1'])))
@@ -961,8 +962,8 @@ dta <- data.frame(time = v2, theta = delta1, lower = lower, upper = upper)
 p.inter.jn <- ggplot(data = dta, aes(x = time, y = theta)) + geom_line(color = "black") + theme_bw() + 
   geom_ribbon(aes_string(ymin = "lower", ymax = "upper"), 
               alpha = 0.15, fill = "black") + geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
-  xlab("Time trends") + ylab("Main effect of \nCandidate preference homophily") +
-  ggtitle("Panel B: JN plot for interaction effect of preference homophily and time trends")
+  xlab("Time trends") + ylab("Main effect estimate") +
+  ggtitle("Panel B: JN plot for interaction effect")
 
 require(gridExtra)
 grid.arrange(p.inter.mn, p.inter.jn, nrow = 1, ncol = 2)
