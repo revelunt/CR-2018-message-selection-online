@@ -1,7 +1,7 @@
 
 library(foreign)
 library(plyr)
-
+# rm(list = ls())
 if(!("haven" %in% installed.packages()[,"Package"])) install.packages("haven")
 if(!("data.table" %in% installed.packages()[,"Package"])) install.packages("data.table")
 library(haven)
@@ -58,7 +58,7 @@ g[[1]] <- as.matrix(as_adj(g[[1]]))
 g[[1]] <- sna::event2dichot(g[[1]], method = "absolute", thresh = 2.508298)
 g[[1]] <- as.network(g[[1]])
 
-offsmat[[1]] <- matrix(0, ncol = 312, nrow = 312)
+offsmat[[1]] <- matrix(0, ncol = lengthn, nrow = lengthn)
 rownames(offsmat[[1]]) <- colnames(offsmat[[1]]) <- network.vertex.names(g[[1]])
 off1 <- network.vertex.names(g[[1]])[!(network.vertex.names(g[[1]]) %in% nodelist1)]
 
@@ -78,7 +78,7 @@ g[[2]] <- as.matrix(as_adj(g[[2]]))
 g[[2]] <- sna::event2dichot(g[[2]], method = "absolute", thresh = 2.909601)
 g[[2]] <- as.network(g[[2]])
 
-offsmat[[2]] <- matrix(0, ncol = 312, nrow = 312)
+offsmat[[2]] <- matrix(0, ncol = lengthn, nrow = lengthn)
 rownames(offsmat[[2]]) <- colnames(offsmat[[2]]) <- network.vertex.names(g[[2]])
 off2 <- network.vertex.names(g[[2]])[!(network.vertex.names(g[[2]]) %in% nodelist2)]
 
@@ -99,7 +99,7 @@ g[[3]] <- as.matrix(as_adj(g[[3]]))
 g[[3]] <- sna::event2dichot(g[[3]], method = "absolute", thresh = 3.233531)
 g[[3]] <- as.network(g[[3]])
 
-offsmat[[3]] <- matrix(0, ncol = 312, nrow = 312)
+offsmat[[3]] <- matrix(0, ncol = lengthn, nrow = lengthn)
 rownames(offsmat[[3]]) <- colnames(offsmat[[3]]) <- network.vertex.names(g[[3]])
 off3 <- network.vertex.names(g[[3]])[!(network.vertex.names(g[[3]]) %in% nodelist3)]
 

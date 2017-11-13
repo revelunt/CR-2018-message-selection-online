@@ -26,15 +26,18 @@ dim(as.matrix(g[[1]]))
 data_to_imp <- data.frame(
   ids = rep(network::network.vertex.names(g[[1]]), 3),
   waves = rep(1:3, each = 341),
-  candidate.image.Park = c(g[[1]] %v% "candidate.image.Park", g[[2]] %v% "candidate.image.Park", g[[3]] %v% "candidate.image.Park"),
-  candidate.image.Moon = c(g[[1]] %v% "candidate.image.Moon", g[[2]] %v% "candidate.image.Moon", g[[3]] %v% "candidate.image.Moon"),
+  candidate.image.Park = c(dat[vids, pv194:pv208][, (Mean = rowMeans(.SD)), by = vids][,V1], 
+                           dat[vids, kv7:kv21][, (Mean = rowMeans(.SD)), by = vids][,V1], 
+                           dat[vids, hv32:hv46][, (Mean = rowMeans(.SD)), by = vids][,V1]),
+  candidate.image.Moon = c(dat[vids, pv209:pv223][, (Mean = rowMeans(.SD)), by = vids][,V1], 
+                           dat[vids, kv22:kv36][, (Mean = rowMeans(.SD)), by = vids][,V1], 
+                           dat[vids, hv47:hv61][, (Mean = rowMeans(.SD)), by = vids][,V1]),
   candidate.preference = c(g[[1]] %v% "candidate.preference", g[[2]] %v% "candidate.preference", g[[3]] %v% "candidate.preference"),
   liberal.issue.stance = c(g[[1]] %v% "liberal.issue.stance", g[[2]] %v% "liberal.issue.stance", g[[3]] %v% "liberal.issue.stance"),
   conserv.issue.stance = c(g[[1]] %v% "conserv.issue.stance", g[[2]] %v% "conserv.issue.stance", g[[3]] %v% "conserv.issue.stance"),
-  external.efficacy = c(g[[1]] %v% "external.efficacy", g[[2]] %v% "external.efficacy", g[[3]] %v% "external.efficacy"),
+  internal.efficacy = c(g[[1]] %v% "internal.efficacy", g[[2]] %v% "internal.efficacy", g[[3]] %v% "internal.efficacy"),
   media.use.freq = c(g[[1]] %v% "media.use.freq", g[[2]] %v% "media.use.freq", g[[3]] %v% "media.use.freq"),
-  talk.freq = c(g[[1]] %v% "talk.freq", g[[2]] %v% "talk.freq", g[[3]] %v% "talk.freq"),
-  pol.ideology = c(g[[1]] %v% "pol.ideology" , g[[2]] %v% "pol.ideology" , g[[3]] %v% "pol.ideology" )
+  talk.freq = c(g[[1]] %v% "talk.freq", g[[2]] %v% "talk.freq", g[[3]] %v% "talk.freq")
 )
 
 ## generate 10 imputed datasets using Amelia function, setting candidate.preference as nominal variable
@@ -53,10 +56,10 @@ wide.dat <- reshape(data_to_imp, direction = 'wide', idvar = 'ids', timevar = 'w
 setDT(wide.dat)
 
 vars.to.check <- c("candidate.image.Park", "candidate.image.Moon", "candidate.preference", 
-                   "liberal.issue.stance", "conserv.issue.stance", "external.efficacy", 
-                   "media.use.freq", "talk.freq", "pol.ideology")
+                   "liberal.issue.stance", "conserv.issue.stance", "internal.efficacy", 
+                   "media.use.freq", "talk.freq")
 
-test.cor.summary <- matrix(NA, ncol = 3, nrow = 9)
+test.cor.summary <- matrix(NA, ncol = 3, nrow = 8)
 rownames(test.cor.summary) <- vars.to.check
 colnames(test.cor.summary) <- c("mean", "min", "max")
 

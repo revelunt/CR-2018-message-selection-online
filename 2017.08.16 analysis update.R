@@ -16,6 +16,7 @@ require(texreg)
 require(parallel)
 
 # setwd("~/Dropbox/GitHub/Korean2012ElectionProject")
+rm(list = ls())
 source("dev/btergm helper-functions.R")
 source("dev/btergm (1) data prep.R")
 
