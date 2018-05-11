@@ -376,6 +376,7 @@ for (i in 1:3) {
   g[[i]] %v% "age" <- dat[vids, as.numeric(age)/10] ## age in ten years
   g[[i]] %v% "gender" <- dat[vids, as.numeric(sex) - 1] ## 1 = female, 0 = male
   g[[i]] %v% "edu" <- dat[vids, as.numeric(edu)] ## education level (1 = "less than elemantry" vs. 9 = "more than postgraduate")
+  g[[i]] %v% "ideology" <- dat2[, as.numeric(ide_self)]
   
   ## region of origin
   ## 1 = Seoul, 2 = Busan, Ulsan & Kungnam, 3 = Tague and Kungbuk

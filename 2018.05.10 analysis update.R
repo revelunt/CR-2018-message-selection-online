@@ -15,13 +15,70 @@ require(btergm)
 require(texreg)
 require(parallel)
 
-# setwd("~/Dropbox/GitHub/Korean2012ElectionProject")
 rm(list = ls())
 source("dev/btergm helper-functions.R")
 source("dev/btergm (1) data prep.R")
 
 RNGkind("L'Ecuyer-CMRG")
 set.seed(12345, "L'Ecuyer")
+
+## ------------------------- ##
+## Quantities reported in ms ##
+## ------------------------- ##
+
+net <- read.csv("Dat/Reading_1113-1126_Participants(N=341)_Count(N=160836).csv")
+net2 <- read.csv("Dat/Reading_1127-1219_Participants(N=341)_Count(N=160836).csv")
+net2 <- data.frame(reading.time = net2$Reading.Time, reader.id = net2$Reader.Id, poster.id = net2$Poster.Id)
+net <- rbind(net, net2)
+setDT(net)
+net[, reading.date := as.Date(reading.time, format = "%Y-%m-%d %H:%M:%S")]
+
+## study period (27 days)
+net[, length(unique(reading.date))]
+
+## total sample (341)
+dat[, .N]
+
+## total eligible sample (312)
+dat[vids, .N]
+
+## mean number of posts made by respondents
+dat[vids, mean(쓰기_sum, na.rm = T)]
+
+## mean number of posts being read by respondents
+net[, count := 1]
+net[reader.id %in% vids & poster.id %in% vids, 
+    sum(count), by = reader.id][, mean(V1)]
+
+## mean number of unique post read by respondents
+unique(net[reader.id %in% vids & poster.id %in% vids, ], 
+       by = c("reader.id", "poster.id"))[, 
+                                         sum(count), by = reader.id][, mean(V1)]
+
+## footnote 2
+dat[vids, median(age)]
+dat[vids, mean(sex - 1)]
+
+## footnote 4
+## number of those who posts anything at all
+table(vids %in% net[, unique(poster.id)])
+
+## number of those who reads anything at all
+table(vids %in% net[, unique(reader.id)])
+
+## median of reading count divided by 27 days
+net[(reader.id %in% vids) & (poster.id %in% vids), 
+    sum(count), by = reader.id][, median(V1)/27]
+
+## median of posting count divided by 27 days
+dat[vids, median(쓰기_sum, na.rm = T)]/27
+
+## unique number of users per day
+net[reader.id %in% vids & poster.id %in% vids, 
+    length(unique(c(unique(reader.id), unique(poster.id)))), 
+    by = reading.date][, mean(V1)]
+
+rm(net, net2)
 
 ## ----------------- ##
 ## Data descriptives ##
@@ -60,6 +117,14 @@ sapply(g, function(x) {
 dat[vids, .(mean = mean(canpref1), sd = sd(canpref1))]
 dat[vids, .(mean = mean(canpref2), sd = sd(canpref2))]
 dat[vids, .(mean = mean(canpref3), sd = sd(canpref3))]
+
+## ideological self-placement 
+sapply(g, function(x) {
+  temp <- ergmMPLE(x ~ absdiff("ideology"), output = "array")$predictor[,,1]
+  dimnames(temp) <- NULL
+  diag(temp) <- 0
+  print(c(mean = mean(temp), sd = sd(temp)))
+})
 
 ## ideological policy preference
 ## see line 177 to 196, and line 223 to 228 in "dev/btergm (1) data prep.R" for detailed coding
@@ -145,11 +210,13 @@ gof.statistics <- c(dsp, odeg, ideg, desp_OTP, desp_ITP, desp_OSP, desp_ISP,
                     geodesic, triad.directed, rocpr, walktrap.modularity)
 R <- 1000
 parallel <- "snow"
-ncpus <- parallel::detectCores()
+ncpus <- parallel::detectCores(logical = F)
 gof_ncpus <- 4
 
 
 ## first, start with control only model
+## set custom seed for reproducibility
+set.seed(12345, kind = "L'Ecuyer-CMRG")
 model1 <- btergm(g ~ edges + ## intercept
                    
                    ## demographic controls
@@ -294,72 +361,72 @@ plot(final.model.gof$`Tie prediction`)
 plot(final.model.gof$`Modularity (walktrap)`)
 dev.off()
 
-screenreg(list(model1, model2, final.model), digits = 3, leading.zero = F, single.row = T, 
-          override.ci.low = list(summary.1[,2], summary.2[,2], summary.final[,2]), 
-          override.ci.up = list(summary.1[,2], summary.2[,2], summary.final[, 3]))
+## final model II, ideology homophily instead of candidate / policy preference
+set.seed(12345, kind = "L'Ecuyer-CMRG")
+final.model2 <- btergm(g ~ edges + ## intercept
+                        
+                        ## demographic controls
+                        nodeicov("age") + nodeocov("age") + 
+                        nodeifactor("gender") + nodeofactor("gender") + nodematch("gender") + 
+                        nodeicov("edu") + nodeocov("edu") + 
+                        nodeifactor("region_origin2") + 
+                        nodeofactor("region_origin2") + 
+                        nodematch("region_origin2") +   
+                        
+                        ## political discussion-related controls
+                        nodeicov("talk.freq") + nodeocov("talk.freq") + 
+                        nodeicov("media.use.freq") + nodeocov("media.use.freq") + 
+                        nodeicov("internal.efficacy") + nodeocov("internal.efficacy") +
+                        nodeifactor("candidate.preference") + nodeofactor("candidate.preference") + 
+                        
+                        ## individual, motivation factor
+                        nodeicov("consistency.motivation") + nodeocov("consistency.motivation") + 
+                        nodeicov("understanding.motivation") + nodeocov("understanding.motivation") + 
+                        nodeicov("hedomic.motivation") + nodeocov("hedomic.motivation") + 
+                        
+                        ## dyadic, consistency
+                        absdiff("ideology") + 
+                        
+                        ## dyadic, understanding
+                        edgecov(evaludative.criteria.sim) +
+                        
+                        ## endogenous and lagged structural, control
+                        isolates + mutual + 
+                        edgecov(g_autoregression) + 
+                        gwdsp(decay = 1, fixed = T) + 
+                        
+                        ## lagged structural, control
+                        edgecov(g_delrecip) + 
+                        edgecov(g_lagtransitivity) + ## lagged gwesp_OTP
+                        edgecov(g_lagcyclic) + ## lagged gwesp_ITP
+                        edgecov(g_lag_shared_activity) + ## lagged gwesp_OSP
+                        edgecov(g_lag_shared_popularity) + ## lagged gwesp_ISP
+                        nodeocov("lagged.sender.effect") + 
+                        nodeicov("lagged.receiver.effect") + 
+                        
+                        ## endogenous structural
+                        dgwesp(decay = 3, fixed = T, type = "OTP") + 
+                        dgwesp(decay = 3, fixed = T, type = "ITP") + 
+                        dgwesp(decay = 3, fixed = T, type = "OSP") + 
+                        dgwesp(decay = 2, fixed = T, type = "ISP") + 
+                        
+                        gwodegree(decay = 2, fixed = T) + 
+                        gwidegree(decay = 3, fixed = T), ## hedonic 
+                      
+                      verbose = T, R = R, ncpus = ncpus, parallel = parallel); summary(final.model2)
 
-# ===========================================================================================================================================
-#   Control only                   Control + Structural           Final Model                  
-# -------------------------------------------------------------------------------------------------------------------------------------------
-# Edges (Intercept)                                 -4.977 [-6.749; -6.749] *      -1.127 [-2.206; -2.206] *      -1.890 [-2.932; -1.392] *
-# Motivation and Homophily                                                                                                                   
-#   Consistency motivation (in-ties)                                                                                .034 [  .009;   .113] *
-#   Consistency motivation (out-ties)                                                                               .025 [ -.044;   .077]  
-#   Understanding motivation (in-ties)                                                                             -.052 [ -.080;   .022]  
-#   Understanding motivation (out-ties)                                                                             .028 [  .005;   .076] *
-#   Hedonic motivation (in-ties)                                                                                   -.012 [ -.029;   .001]  
-#   Hedonic motivation (out-ties)                                                                                   .102 [  .087;   .133] *
-#   Same candidate pref                                                                                            -.032 [ -.070;   .047]  
-#   Similar policy pref                                                                                            -.108 [ -.212;   .006]  
-#   Similar evaluative criteria                                                                                     .407 [  .399;   .415] *
-# Endogenous structural effects                                                                                                              
-#   Isolates                                                                        1.021 [  .797;   .797] *       1.019 [  .908;  1.264] *
-#   Reciprocity                                                                      .765 [  .497;   .497] *        .769 [  .564;  1.068] *
-#   Multiple path closure (GWESP-OTP, 3)                                             .058 [ -.056;  -.056] *        .058 [ -.053;   .125]  
-#   Multiple cyclic closure (GWESP-ITP, 3)                                          -.068 [ -.082;  -.082] *       -.066 [ -.080;  -.060] *
-#   Multiple activity closure (GWESP-OSP, 3)                                         .035 [  .030;   .030] *        .036 [  .033;   .045] *
-#   Multiple popularity closure (GWESP-ISP, 2)                                       .117 [  .083;   .083] *        .115 [  .093;   .232] *
-#   Multiple two-paths (GWDSP, 1)                                                    .003 [ -.005;  -.005] *        .003 [ -.007;   .007]  
-#   Activity spread (GW-outdegree, 2)                                              -4.399 [-4.669; -4.669] *      -4.350 [-4.557; -4.157] *
-#   Popularity spread (GW-indegree, 3)                                             -4.056 [-5.343; -5.343] *      -4.049 [-5.342; -3.259] *
-# Lagged structural effects                                                                                                                  
-#   Previous communication                                                           .214 [  .182;   .182] *        .222 [  .192;   .253] *
-#   Delayed reciprocity                                                              .082 [ -.067;  -.067] *        .074 [ -.073;   .194]  
-#   Delayed transitivity closure                                                     .034 [  .018;   .018] *        .034 [  .020;   .055] *
-#   Delayed cyclic closure                                                           .037 [  .010;   .010] *        .034 [  .008;   .057] *
-#   Delayed activity closure                                                        -.058 [ -.068;  -.068] *       -.056 [ -.067;  -.046] *
-#   Delayed popularity closure                                                      -.060 [ -.089;  -.089] *       -.059 [ -.110;  -.043] *
-#   Persistent sender (out-tie)                                                      .019 [  .009;   .009] *        .019 [  .010;   .029] *
-#   Persistent receiver (in-ties)                                                    .023 [  .019;   .019] *        .023 [  .018;   .038] *
-# Controls                                                                                                                                   
-#   Age (in-ties)                                     .101 [ -.012;  -.012] *        .003 [ -.017;  -.017] *        .001 [ -.020;   .022]  
-#   Age (out-ties)                                    .218 [ -.097;  -.097] *        .031 [ -.224;  -.224] *        .052 [ -.105;   .093]  
-#   Female (in-ties)                                 -.204 [ -.245;  -.245] *       -.001 [ -.038;  -.038] *        .005 [ -.036;   .041]  
-#   Female (out-ties)                                -.169 [ -.446;  -.446] *        .075 [ -.308;  -.308] *        .014 [ -.348;   .254]  
-#   Gender homophily                                  .010 [ -.032;  -.032] *        .051 [  .018;   .018] *        .044 [  .023;   .086] *
-#   Education (in-ties)                              -.114 [ -.182;  -.182] *       -.008 [ -.042;  -.042] *       -.011 [ -.039;   .019]  
-#   Education (out-ties)                             -.132 [ -.239;  -.239] *        .028 [ -.010;  -.010] *        .016 [ -.015;   .091]  
-#   Regional origin = Seoul (in-ties)                -.418 [ -.501;  -.501] *       -.077 [ -.116;  -.116] *       -.084 [ -.130;   .044]  
-#   Regional origin = Seoul (out-ties)               -.192 [ -.383;  -.383] *       -.143 [ -.635;  -.635] *       -.125 [ -.438;   .350]  
-#   Regional homophily (Seoul)                       -.021 [ -.047;  -.047] *        .013 [ -.020;  -.020] *        .017 [ -.014;   .080]  
-#   Talk freq (in-ties)                               .129 [ -.120;  -.120] *        .045 [  .021;   .021] *        .046 [  .024;   .049] *
-#   Talk freq (out-ties)                              .025 [ -.428;  -.428] *        .034 [ -.173;  -.173] *        .014 [ -.099;   .161]  
-#   Media use (in-ties)                              -.061 [ -.108;  -.108] *       -.011 [ -.021;  -.021] *       -.011 [ -.019;  -.003] *
-#   Media use (out-ties)                             -.070 [ -.104;  -.104] *        .040 [  .004;   .004] *        .033 [ -.017;   .071]  
-#   Internal efficacy (in-ties)                       .051 [ -.045;  -.045] *       -.013 [ -.040;  -.040] *       -.013 [ -.058;   .055]  
-#   Internal efficacy (out-ties)                      .187 [  .132;   .132] *       -.018 [ -.098;  -.098] *        .024 [ -.102;   .128]  
-#   Candidate pref = Moon (in-ties)                   .174 [  .057;   .057] *       -.018 [ -.063;  -.063] *        .003 [ -.008;   .092]  
-#   Candidate pref = Moon (out-ties)                  .315 [  .216;   .216] *       -.010 [ -.100;  -.100] *        .013 [ -.123;   .066]  
-# -------------------------------------------------------------------------------------------------------------------------------------------
-#             Num. obs.                                       291096                         291096                         291096                       
-# ===========================================================================================================================================
-#   * = zero outside the 95% bias-corrected and accelerated confidence interval based on 1000 replications
-  
+summary.final2 <- summary(final.model2, type = "bca")
+
+
+screenreg(list(model1, model2, final.model, final.model2), digits = 3, leading.zero = F, single.row = T, 
+          override.ci.low = list(summary.1[,2], summary.2[,2], summary.final[,2], summary.final2[,2]), 
+          override.ci.up = list(summary.1[,2], summary.2[,2], summary.final[, 3], summary.final2[,3]))
+
 ## all models to a file
-texreg::htmlreg(list(model1, model2, final.model), digits = 3, leading.zero = F, single.row = T,
-                override.ci.low = list(summary.1[,2], summary.2[,2], summary.final[,2]), 
-                override.ci.up = list(summary.1[,2], summary.2[,2], summary.final[, 3]),
-                  custom.model.names = c("Control only", "Control + Structural", "Final Model"),
+texreg::htmlreg(list(model1, model2, final.model, final.model2), digits = 3, leading.zero = F, single.row = T,
+                override.ci.low = list(summary.1[,2], summary.2[,2], summary.final[,2], summary.final2[,2]), 
+                override.ci.up = list(summary.1[,2], summary.2[,2], summary.final[, 3], summary.final2[,3]),
+                  custom.model.names = c("Control only", "Control + Structural", "Final Model I", "Final Model II"),
                   custom.coef.names = c("Edges (Intercept)", "Age (in-ties)", "Age (out-ties)",
                                         "Female (in-ties)", "Female (out-ties)", "Gender homophily",
                                         "Education (in-ties)", "Education (out-ties)",
@@ -382,16 +449,74 @@ texreg::htmlreg(list(model1, model2, final.model), digits = 3, leading.zero = F,
                                         "Consistency motivation (in-ties)", "Consistency motivation (out-ties)",
                                         "Understanding motivation (in-ties)", "Understanding motivation (out-ties)", 
                                         "Hedonic motivation (in-ties)", "Hedonic motivation (out-ties)", 
-                                        "Same candidate pref", "Similar policy pref", "Similar evaluative criteria"),
+                                        "Same candidate pref", "Similar policy pref", "Similar evaluative criteria", "Similar ideology"),
                   custom.note = " * = zero outside the 95% bias-corrected and accelerated confidence interval based on 1000 replications", 
-                  reorder.coef = c(1, 37:45, 20:21,31:34,23,35:36, 22,24:30, 2:19),
-                  groups = list("Motivation and Homophily" = 2:10, 
-                                "Endogenous structural effects" = 11:19,
-                                "Lagged structural effects" = 20:27,
-                                "Controls" = 28:45),
+                  reorder.coef = c(1, 37:46, 20:21,31:34,23,35:36, 22,24:30, 2:19),
+                  groups = list("Motivation and Homophily" = 2:11, 
+                                "Endogenous structural effects" = 12:20,
+                                "Lagged structural effects" = 21:28,
+                                "Controls" = 29:46),
                   bold = 0.5, doctype = T, html.tag = T, body.tag = T, indentation = "  ",
                   caption = "",
-                file = "results.Table.Aug02.doc")
+                file = "results.Table.May10.doc")
+
+# ==========================================================================================================================================================================
+#                                                           Control only                  Control + Structural           Final Model I                  Final Model II               
+# --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#   Edges (Intercept)                                   -4.977 [-6.749; -6.749] *      -1.127 [-2.206; -2.206] *      -1.890 [-2.932; -1.392] *      -2.259 [-2.958; -1.732] *
+# Motivation and Homophily                                                                                                                                                  
+#   Consistency motivation (in-ties)                                                                                .034 [  .009;   .113] *        .062 [  .047;   .144] *
+#   Consistency motivation (out-ties)                                                                               .025 [ -.044;   .077]          .046 [  .007;   .046] *
+#   Understanding motivation (in-ties)                                                                             -.052 [ -.080;   .022]         -.078 [ -.118;  -.011] *
+#   Understanding motivation (out-ties)                                                                             .028 [  .005;   .076] *        .056 [  .047;   .092] *
+#   Hedonic motivation (in-ties)                                                                                   -.012 [ -.029;   .001]         -.026 [ -.039;  -.021] *
+#   Hedonic motivation (out-ties)                                                                                   .102 [  .087;   .133] *        .043 [ -.009;   .114]  
+#   Same candidate pref                                                                                            -.032 [ -.070;   .047]                                 
+#   Similar policy pref                                                                                            -.108 [ -.212;   .006]                                 
+#   Similar evaluative criteria                                                                                     .407 [  .399;   .415] *        .482 [  .398;   .482] *
+#   Similar ideology                                                                                                                               .024 [ -.007;   .040]  
+# Endogenous structural effects                                                                                                                                             
+#   Isolates                                                                        1.021 [  .797;   .797] *       1.019 [  .908;  1.264] *        .825 [  .598;  1.224] *
+#   Reciprocity                                                                      .765 [  .497;   .497] *        .769 [  .564;  1.068] *        .720 [  .504;  1.069] *
+#   Multiple path closure (GWESP-OTP, 3)                                             .058 [ -.056;  -.056] *        .058 [ -.053;   .125]          .040 [ -.078;   .067]  
+#   Multiple cyclic closure (GWESP-ITP, 3)                                          -.068 [ -.082;  -.082] *       -.066 [ -.080;  -.060] *       -.058 [ -.077;  -.047] *
+#   Multiple activity closure (GWESP-OSP, 3)                                         .035 [  .030;   .030] *        .036 [  .033;   .045] *        .027 [  .026;   .033] *
+#   Multiple popularity closure (GWESP-ISP, 2)                                       .117 [  .083;   .083] *        .115 [  .093;   .232] *        .129 [  .099;   .286] *
+#   Multiple two-paths (GWDSP, 1)                                                    .003 [ -.005;  -.005] *        .003 [ -.007;   .007]          .008 [  .002;   .016] *
+#   Activity spread (GW-outdegree, 2)                                              -4.399 [-4.669; -4.669] *      -4.350 [-4.557; -4.157] *      -3.923 [-4.124; -3.623] *
+#   Popularity spread (GW-indegree, 3)                                             -4.056 [-5.343; -5.343] *      -4.049 [-5.342; -3.259] *      -4.828 [-5.429; -3.889] *
+# Lagged structural effects                                                                                                                                                 
+#   Previous communication                                                           .214 [  .182;   .182] *        .222 [  .192;   .253] *        .531 [  .494;   .549] *
+#   Delayed reciprocity                                                              .082 [ -.067;  -.067] *        .074 [ -.073;   .194]          .002 [ -.197;   .139]  
+#   Delayed transitivity closure                                                     .034 [  .018;   .018] *        .034 [  .020;   .055] *        .032 [  .026;   .037] *
+#   Delayed cyclic closure                                                           .037 [  .010;   .010] *        .034 [  .008;   .057] *        .032 [  .003;   .035] *
+#   Delayed activity closure                                                        -.058 [ -.068;  -.068] *       -.056 [ -.067;  -.046] *       -.061 [ -.071;  -.037] *
+#   Delayed popularity closure                                                      -.060 [ -.089;  -.089] *       -.059 [ -.110;  -.043] *       -.062 [ -.124;  -.046] *
+#   Persistent sender (out-tie)                                                      .019 [  .009;   .009] *        .019 [  .010;   .029] *        .510 [  .176;   .724] *
+#   Persistent receiver (in-ties)                                                    .023 [  .019;   .019] *        .023 [  .018;   .038] *        .116 [  .020;   .165] *
+# Controls                                                                                                                                                                  
+#   Age (in-ties)                                     .101 [ -.012;  -.012] *        .003 [ -.017;  -.017] *        .001 [ -.020;   .022]         -.025 [ -.033;  -.006] *
+#   Age (out-ties)                                    .218 [ -.097;  -.097] *        .031 [ -.224;  -.224] *        .052 [ -.105;   .093]          .101 [ -.046;   .141]  
+#   Female (in-ties)                                 -.204 [ -.245;  -.245] *       -.001 [ -.038;  -.038] *        .005 [ -.036;   .041]         -.023 [ -.057;   .030]  
+#   Female (out-ties)                                -.169 [ -.446;  -.446] *        .075 [ -.308;  -.308] *        .014 [ -.348;   .254]          .151 [ -.266;   .389]  
+#   Gender homophily                                  .010 [ -.032;  -.032] *        .051 [  .018;   .018] *        .044 [  .023;   .086] *        .045 [  .021;   .100] *
+#   Education (in-ties)                              -.114 [ -.182;  -.182] *       -.008 [ -.042;  -.042] *       -.011 [ -.039;   .019]         -.015 [ -.047;   .014]  
+#   Education (out-ties)                             -.132 [ -.239;  -.239] *        .028 [ -.010;  -.010] *        .016 [ -.015;   .091]         -.044 [ -.096;   .029]  
+#   Regional origin = Seoul (in-ties)                -.418 [ -.501;  -.501] *       -.077 [ -.116;  -.116] *       -.084 [ -.130;   .044]         -.109 [ -.140;  -.030] *
+#   Regional origin = Seoul (out-ties)               -.192 [ -.383;  -.383] *       -.143 [ -.635;  -.635] *       -.125 [ -.438;   .350]         -.135 [ -.435;   .324]  
+#   Regional homophily (Seoul)                       -.021 [ -.047;  -.047] *        .013 [ -.020;  -.020] *        .017 [ -.014;   .080]          .025 [ -.002;   .049]  
+#   Talk freq (in-ties)                               .129 [ -.120;  -.120] *        .045 [  .021;   .021] *        .046 [  .024;   .049] *        .051 [  .048;   .051] *
+#   Talk freq (out-ties)                              .025 [ -.428;  -.428] *        .034 [ -.173;  -.173] *        .014 [ -.099;   .161]          .010 [ -.111;   .206]  
+#   Media use (in-ties)                              -.061 [ -.108;  -.108] *       -.011 [ -.021;  -.021] *       -.011 [ -.019;  -.003] *       -.006 [ -.012;   .004]  
+#   Media use (out-ties)                             -.070 [ -.104;  -.104] *        .040 [  .004;   .004] *        .033 [ -.017;   .071]          .043 [ -.006;   .078]  
+#   Internal efficacy (in-ties)                       .051 [ -.045;  -.045] *       -.013 [ -.040;  -.040] *       -.013 [ -.058;   .055]         -.030 [ -.072;  -.006] *
+#   Internal efficacy (out-ties)                      .187 [  .132;   .132] *       -.018 [ -.098;  -.098] *        .024 [ -.102;   .128]          .115 [  .051;   .163] *
+#   Candidate pref = Moon (in-ties)                   .174 [  .057;   .057] *       -.018 [ -.063;  -.063] *        .003 [ -.008;   .092]         -.003 [ -.056;   .085]  
+#   Candidate pref = Moon (out-ties)                  .315 [  .216;   .216] *       -.010 [ -.100;  -.100] *        .013 [ -.123;   .066]          .080 [ -.004;   .100]  
+# --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#   Num. obs.                                       291096                         291096                         291096                         291096                       
+# ==========================================================================================================================================================================
+#   * = zero outside the 95% bias-corrected and accelerated confidence interval based on 1000 replications
 
 
 ## --------------------------- ##
@@ -597,18 +722,26 @@ same_candidate_preference  <- lapply(1:3, function(i) {
   diag(temp1.t) <- 0
   temp1.t})
 
-# time_trends <- lapply(1:3, function(i) {
-#   dim <- dim(as.matrix(g[[i]]))
-#   outmat <- matrix(i - 1, nrow = dim[1], ncol = dim[2])
-#   diag(outmat) <- 0
-#   outmat
-# })
-# 
-# time.X.same.candidate.preference <- lapply(1:3, function(i) {
-#   outmat <- time_trends[[i]] * same_candidate_preference[[i]]
-#   diag(outmat) <- 0
-#   outmat
-# })
+## interaction effect testing with time, interactin with similar ideology.
+
+similar_ideology  <- lapply(1:3, function(i) {
+  temp1.t <- ergmMPLE(g[[i]] ~ absdiff("ideology"), output = "array")$predictor[,,1]
+  dimnames(temp1.t) <- NULL
+  diag(temp1.t) <- 0
+  temp1.t})
+
+time_trends <- lapply(1:3, function(i) {
+  dim <- dim(as.matrix(g[[i]]))
+  outmat <- matrix(i - 1, nrow = dim[1], ncol = dim[2])
+  diag(outmat) <- 0
+  outmat
+})
+
+time.X.same.candidate.preference <- lapply(1:3, function(i) {
+  outmat <- time_trends[[i]] * same_candidate_preference[[i]]
+  diag(outmat) <- 0
+  outmat
+})
 
 
 evaludative_criteria_sim <- evaludative.criteria.sim
@@ -795,69 +928,70 @@ final.model6 <- btergm(g ~ edges + ## intercept
 
 summary.int3 <- summary(final.model6, type = "bca")
 
+# ideology homophily model
+final.model7 <- btergm(g ~ edges + ## intercept
+                         
+                         ## demographic controls
+                         nodeicov("age") + nodeocov("age") + 
+                         nodeifactor("gender") + nodeofactor("gender") + nodematch("gender") + 
+                         nodeicov("edu") + nodeocov("edu") + 
+                         nodeifactor("region_origin2") + 
+                         nodeofactor("region_origin2") + 
+                         nodematch("region_origin2") +   
+                         
+                         ## political discussion-related controls
+                         nodeicov("talk.freq") + nodeocov("talk.freq") + 
+                         nodeicov("media.use.freq") + nodeocov("media.use.freq") + 
+                         nodeicov("internal.efficacy") + nodeocov("internal.efficacy") +
+                         nodeifactor("candidate.preference") + nodeofactor("candidate.preference") + 
+                         
+                         ## individual, motivation factor
+                         nodeicov("consistency.motivation") + nodeocov("consistency.motivation") + 
+                         nodeicov("understanding.motivation") + nodeocov("understanding.motivation") + 
+                         nodeicov("hedomic.motivation") + nodeocov("hedomic.motivation") + 
+                         
+                         ## dyadic, consistency
+                         absdiff("ideology") + 
+                         
+                         ## dyadic, understanding
+                         edgecov(evaludative.criteria.sim) +
+                         
+                         ## endogenous and lagged structural, control
+                         isolates + mutual + 
+                         edgecov(g_autoregression) + 
+                         gwdsp(decay = 1, fixed = T) + 
+                         
+                         ## lagged structural, control
+                         edgecov(g_delrecip) + 
+                         edgecov(g_lagtransitivity) + ## lagged gwesp_OTP
+                         edgecov(g_lagcyclic) + ## lagged gwesp_ITP
+                         edgecov(g_lag_shared_activity) + ## lagged gwesp_OSP
+                         edgecov(g_lag_shared_popularity) + ## lagged gwesp_ISP
+                         nodeocov("lagged.sender.effect") + 
+                         nodeicov("lagged.receiver.effect") + 
+                         
+                         ## endogenous structural
+                         dgwesp(decay = 3, fixed = T, type = "OTP") + ## 3 or 1.5 understanding
+                         dgwesp(decay = 3, fixed = T, type = "ITP") + ## 3 or 1.5 understanding
+                         dgwesp(decay = 3, fixed = T, type = "OSP") + ## 3 or 1.5 consistency
+                         dgwesp(decay = 2, fixed = T, type = "ISP") + ## 3 or 1.5 consistency
+                         
+                         gwodegree(decay = 2, fixed = T) + ## hedonic
+                         gwidegree(decay = 3, fixed = T) +
+                         
+                         ## interaction terms
+                         timecov(transform = function(t) t) +
+                         timecov(similar_ideology, transform = function(t) t),
+                       
+                       R = 1000, parallel = "multicore", ncpus = parallel::detectCores(logical = F));
 
-# =======================================================================================================================================
-#                                                   candidate.pref.interaction     eval.criteria.interaction      policy.pref.interaction      
-# ---------------------------------------------------------------------------------------------------------------------------------------
-#   Edges (Intercept)                               -1.819 [-2.732;  -.304] *      -1.823 [-2.807; -1.169] *      -1.936 [-2.937; -1.098] *
-#   Age (in-ties)                                    -.003 [ -.023;   .020]         -.003 [ -.022;   .035]         -.003 [ -.022;   .020]  
-#   Age (out-ties)                                    .040 [ -.192;   .091]          .040 [ -.112;   .090]          .040 [ -.113;   .090]  
-#   Female (in-ties)                                  .009 [ -.037;   .043]          .009 [ -.036;   .071]          .009 [ -.036;   .071]  
-#   Female (out-ties)                                 .029 [ -.348;   .268]          .029 [ -.348;   .268]          .029 [ -.348;   .335]  
-#   Gender homophily                                  .044 [  .015;   .070] *        .044 [  .015;   .086] *        .044 [  .022;   .086] *
-#   Education (in-ties)                              -.010 [ -.029;   .019]         -.010 [ -.029;   .019]         -.010 [ -.029;   .018]  
-#   Education (out-ties)                              .015 [ -.016;   .073]          .015 [ -.016;   .072]          .015 [ -.016;   .071]  
-#   Regional origin = Seoul (in-ties)                -.083 [ -.157;   .044]         -.084 [ -.131;   .044]         -.084 [ -.157;  -.031] *
-#   Regional origin = Seoul (out-ties)               -.143 [ -.598;   .350]         -.142 [ -.450;   .350]         -.143 [ -.449;   .350]  
-#   Regional homophily (Seoul)                        .015 [ -.014;   .048]          .015 [ -.014;   .080]          .015 [ -.014;   .080]  
-#   Talk freq (in-ties)                               .030 [  .018;   .037] *        .030 [  .018;   .036] *        .030 [  .002;   .037] *
-#   Talk freq (out-ties)                             -.005 [ -.097;   .161]         -.006 [ -.130;   .161]         -.006 [ -.143;   .110]  
-#   Media use (in-ties)                              -.018 [ -.024;  -.002] *       -.018 [ -.024;  -.002] *       -.018 [ -.024;   .000]  
-#   Media use (out-ties)                              .024 [  .001;   .287] *        .024 [ -.017;   .075]          .024 [ -.017;   .074]  
-#   Internal efficacy (in-ties)                      -.012 [ -.058;   .055]         -.012 [ -.058;   .055]         -.012 [ -.042;   .055]  
-#   Internal efficacy (out-ties)                      .030 [ -.102;   .128]          .031 [ -.064;   .128]          .031 [ -.102;   .128]  
-#   Candidate pref = Moon (in-ties)                   .006 [ -.008;   .049]          .004 [ -.008;   .092]          .003 [ -.008;   .092]  
-#   Candidate pref = Moon (out-ties)                  .017 [ -.123;   .070]          .017 [ -.123;   .070]          .016 [ -.063;   .131]  
-#   Consistency motivation (in-ties)                  .037 [ -.004;   .113]          .037 [  .010;   .113] *        .037 [  .010;   .113] *
-#   Consistency motivation (out-ties)                 .019 [ -.112;   .071]          .019 [ -.112;   .071]          .019 [ -.043;   .071]  
-#   Understanding motivation (in-ties)               -.049 [ -.103;   .022]         -.049 [ -.103;   .022]         -.049 [ -.078;   .022]  
-#   Understanding motivation (out-ties)               .036 [  .012;   .075] *        .035 [  .011;   .087] *        .035 [  .011;   .075] *
-#   Hedonic motivation (in-ties)                     -.012 [ -.038;   .001]         -.013 [ -.032;   .001]         -.013 [ -.038;   .001]  
-#   Hedonic motivation (out-ties)                     .102 [  .094;   .130] *        .102 [  .096;   .130] *        .102 [  .094;   .105] *
-#   Same candidate pref                              -.135 [ -.211;  -.111] *       -.033 [ -.079;   .047]         -.032 [ -.079;   .047]  
-#   Similar policy pref                              -.091 [ -.225;   .042]         -.090 [ -.230;   .042]          .094 [ -.764;   .272]  
-#   Similar evaluative criteria                       .385 [  .260;   .404] *        .295 [ -.359;   .639]          .389 [  .255;   .405] *
-#   Isolates                                         1.003 [  .793;  1.264] *       1.005 [  .793;  1.152] *       1.005 [  .895;  1.264] *
-#   Reciprocity                                       .768 [  .560;  1.068] *        .768 [  .559;  1.068] *        .768 [  .507;  1.068] *
-#   Previous communication                            .220 [  .184;   .250] *        .220 [  .184;   .250] *        .219 [  .185;   .250] *
-#   Multiple two-paths (GWDSP, 1)                     .003 [ -.007;   .007]          .003 [ -.007;   .007]          .003 [ -.007;   .009]  
-#   Delayed reciprocity                               .076 [ -.073;   .289]          .075 [ -.073;   .257]          .076 [ -.073;   .257]  
-#   Delayed transitivity closure                      .033 [  .019;   .051] *        .033 [  .019;   .051] *        .033 [  .019;   .051] *
-#   Delayed cyclic closure                            .032 [  .008;   .041] *        .032 [  .008;   .057] *        .032 [  .008;   .043] *
-#   Delayed activity closure                         -.055 [ -.060;  -.035] *       -.055 [ -.065;  -.035] *       -.055 [ -.065;  -.035] *
-#   Delayed popularity closure                       -.058 [ -.081;  -.034] *       -.058 [ -.110;  -.043] *       -.058 [ -.081;  -.034] *
-#   Persistent sender (out-tie)                       .019 [  .010;   .029] *        .019 [  .010;   .025] *        .019 [  .010;   .025] *
-#   Persistent receiver (in-ties)                     .023 [  .018;   .038] *        .023 [  .018;   .038] *        .023 [  .021;   .038] *
-#   Multiple path closure (GWESP-OTP, 3)              .057 [ -.053;   .094]          .057 [ -.053;   .125]          .057 [  .025;   .125] *
-#   Multiple cyclic closure (GWESP-ITP, 3)           -.066 [ -.076;  -.061] *       -.066 [ -.076;  -.061] *       -.066 [ -.080;  -.061] *
-#   Multiple activity closure (GWESP-OSP, 3)          .035 [  .033;   .043] *        .035 [  .033;   .041] *        .035 [  .033;   .043] *
-#   Multiple popularity closure (GWESP-ISP, 2)        .113 [  .083;   .232] *        .113 [  .083;   .232] *        .113 [  .098;   .232] *
-#   Activity spread (GW-outdegree, 2)               -4.395 [-4.557; -4.153] *      -4.392 [-4.557; -4.152] *      -4.392 [-4.557; -3.994] *
-#   Popularity spread (GW-indegree, 3)              -4.123 [-5.342; -3.541] *      -4.120 [-5.342; -3.537] *      -4.121 [-4.810; -3.259] *
-#   time trends (linear)                              .079 [ -.059;   .262]          .083 [  .021;   .171] *        .144 [  .063;   .235] *
-#   time X same.canddiate.pref                        .051 [  .038;   .071] *                                                              
-#   time X evaluative criteria similarity                                            .046 [ -.176;   .242]                                 
-#   time X policy pref similarity                                                                                  -.095 [ -.253;   .214]  
-# ---------------------------------------------------------------------------------------------------------------------------------------
-#   Num. obs.                                   291096                         291096                         291096                       
-# =======================================================================================================================================
-#   * = zero outside the 95% bias-corrected and accelerated confidence interval based on 1000 replications
+summary.int4 <- summary(final.model7, type = "bca")
 
-
-texreg::htmlreg(list(final.model4, final.model5, final.model6), digits = 3, leading.zero = F, single.row = T,
-                override.ci.low = list(summary.int1[,2], summary.int2[,2], summary.int3[,2]), 
-                override.ci.up = list(summary.int1[,3], summary.int2[,3], summary.int3[,3]),
-                custom.model.names = c("candidate.pref.interaction", "eval.criteria.interaction", "policy.pref.interaction"),
+## all interaction results in one file
+texreg::htmlreg(list(final.model4, final.model5, final.model6, final.model7), digits = 3, leading.zero = F, single.row = T,
+                override.ci.low = list(summary.int1[,2], summary.int2[,2], summary.int3[,2], summary.int4[,2]), 
+                override.ci.up = list(summary.int1[,3], summary.int2[,3], summary.int3[,3], summary.int4[,3]),
+                custom.model.names = c("candidate.pref.interaction", "eval.criteria.interaction", "policy.pref.interaction", "ideology.interaction"),
                 custom.coef.names = c("Edges (Intercept)", "Age (in-ties)", "Age (out-ties)",
                                       "Female (in-ties)", "Female (out-ties)", "Gender homophily",
                                       "Education (in-ties)", "Education (out-ties)",
@@ -882,12 +1016,63 @@ texreg::htmlreg(list(final.model4, final.model5, final.model6), digits = 3, lead
                                       "Multiple activity closure (GWESP-OSP, 3)", "Multiple popularity closure (GWESP-ISP, 2)",
                                       "Activity spread (GW-outdegree, 2)", "Popularity spread (GW-indegree, 3)",
                                       "time trends (linear)", "time X same.canddiate.pref", 
-                                      "time X evaluative criteria similarity", "time X policy pref similarity"),
+                                      "time X evaluative criteria similarity", "time X policy pref similarity", 
+                                      "Similar ideology","time X Similar ideology"),
                 custom.note = " * = zero outside the 95% bias-corrected and accelerated confidence interval based on 1000 replications", 
                 
                 bold = 0.5, doctype = T, html.tag = T, body.tag = T, indentation = "  ",
                 caption = "",
-                file = "results.Table2.Aug04.doc")
+                file = "results.Table2.May10.doc")
+
+
+## Main results reported in MS Table 3
+texreg::htmlreg(list(final.model, final.model2, final.model4, final.model7), 
+                digits = 3, leading.zero = F, single.row = T,
+                override.ci.low = list(summary.final[,2], summary.final2[,2], summary.int1[,2], summary.int4[,2]), 
+                override.ci.up = list(summary.final[,3], summary.final2[,3], summary.int1[,3], summary.int4[,3]),
+                custom.model.names = c("Final Model I", "Final Model II", "Interaction I", "Interaction II"),
+                custom.coef.names = c("Edges (Intercept)", "Age (in-ties)", "Age (out-ties)",
+                                      "Female (in-ties)", "Female (out-ties)", "Gender homophily",
+                                      "Education (in-ties)", "Education (out-ties)",
+                                      "Regional origin = Seoul (in-ties)",
+                                      "Regional origin = Seoul (out-ties)",
+                                      "Regional homophily (Seoul)",
+                                      "Talk freq (in-ties)", "Talk freq (out-ties)", 
+                                      "Media use (in-ties)", "Media use (out-ties)",
+                                      "Internal efficacy (in-ties)", "Internal efficacy (out-ties)",
+                                      "Candidate pref = Moon (in-ties)", "Candidate pref = Moon (out-ties)",
+                                      "Consistency motivation (in-ties)", "Consistency motivation (out-ties)",
+                                      "Understanding motivation (in-ties)", "Understanding motivation (out-ties)", 
+                                      "Hedonic motivation (in-ties)", "Hedonic motivation (out-ties)", 
+                                      "Same candidate pref", "Similar policy pref", "Similar evaluative criteria",
+                                      "Isolates", "Reciprocity", "Previous communication",
+                                      "Multiple two-paths (GWDSP, 1)", 
+                                      "Delayed reciprocity", 
+                                      "Delayed transitivity closure", "Delayed cyclic closure", 
+                                      "Delayed activity closure", "Delayed popularity closure",
+                                      "Persistent sender (out-tie)", "Persistent receiver (in-ties)",
+                                      "Multiple path closure (GWESP-OTP, 3)", "Multiple cyclic closure (GWESP-ITP, 3)", 
+                                      "Multiple activity closure (GWESP-OSP, 3)", "Multiple popularity closure (GWESP-ISP, 2)",
+                                      "Activity spread (GW-outdegree, 2)", "Popularity spread (GW-indegree, 3)",
+                                      "Similar ideology", "time trends (linear)", 
+                                      "time X same.canddiate.pref","time X Similar ideology"),
+                custom.note = " * = zero outside the 95% bias-corrected and accelerated confidence interval based on 1000 replications", 
+                reorder.coef = c(1, 20:23,26:27,46,28, 47:49, 29:30,32,40:45, 31,33:39, 2:19,24:25),
+                groups = list("Motivation and Homophily" = 2:9, 
+                              "Interactions" = 10:12,
+                              "Endogenous structural effects" = 13:21,
+                              "Lagged structural effects" = 22:29,
+                              "Controls" = 30:49),
+                bold = 0.5, doctype = T, html.tag = T, body.tag = T, indentation = "  ",
+                caption = "",
+                file = "results.Table3.May10.doc")
+
+
+
+
+
+
+
 
 ## get coef from the fitted model, clear up '[[i]]' in the name
 co <- coef(final.model4)
@@ -987,7 +1172,7 @@ criteria.X.preference <- lapply(1:3, function(i) {
 })
 
 
-final.model7 <- btergm(g ~ edges + ## intercept
+final.model8 <- btergm(g ~ edges + ## intercept
                           
                           ## demographic controls
                           nodeicov("age") + nodeocov("age") + 
@@ -1041,9 +1226,9 @@ final.model7 <- btergm(g ~ edges + ## intercept
                        
                           verbose = T, R = 1000, parallel = "snow", ncpus = parallel::detectCores())
 
-summary(final.model7, type = "bca")
+summary(final.model8, type = "bca")
 
-ep <- edgeprob(final.model7)
+ep <- edgeprob(final.model8)
 setDT(ep)
 
 ggplot(ep, aes(x = edgecov.evaludative.criteria.sim, y = probability, colour = factor(nodematch.candidate.preference))) + 
