@@ -47,11 +47,11 @@ dat[vids, mean(쓰기_sum, na.rm = T)]
 
 ## mean number of posts being read by respondents
 net[, count := 1]
-net[reader.id %in% vids & poster.id %in% vids, 
+net[reader.id %in% vids, 
     sum(count), by = reader.id][, mean(V1)]
 
 ## mean number of unique post read by respondents
-unique(net[reader.id %in% vids & poster.id %in% vids, ], 
+unique(net[reader.id %in% vids, ], 
        by = c("reader.id", "poster.id"))[, 
                                          sum(count), by = reader.id][, mean(V1)]
 
